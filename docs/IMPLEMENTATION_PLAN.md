@@ -23,7 +23,7 @@
 ## Implementation checkpoint — 2026-11-17
 
 - Stages 1–3 are implemented: provider/continuity ADRs, project-local Codex skill, Typer authoring workflow, Pydantic bibles/storyboards, and continuity ledger rules.
-- Stage 4 is implemented for offline/manual use: ManualProvider is the default; Muse2API has a separate experimental adapter with mocked contract tests only. Neither gateway compatibility nor the user's Muse account is live-verified.
+- Stage 4 is implemented for offline/manual use: ManualProvider is the default; Muse2API has a separate experimental adapter with mocked contract tests only. A status refresh downloads completed results into the project and validates them with ffprobe before marking a job generated. Neither gateway compatibility nor the user's Muse account is live-verified.
 - Manual media import validates video with ffprobe, copies it into the episode's per-shot clips directory without overwriting, and records its relative path, SHA-256, import time and observed metadata. Importing a file does not update the continuity ledger; after review, `continuity update` records the observation and advances the matching generated job to reviewed.
 - Stage 5 is implemented and tested against a synthetic local fixture with installed FFmpeg/ffprobe. No Muse-generated media was used.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.

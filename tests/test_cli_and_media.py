@@ -8,12 +8,33 @@ import pytest
 from typer.testing import CliRunner
 
 from animation_studio.cli.main import app
-from animation_studio.core.models import ContinuityLedger, Episode, JobQueue, JobStatus, ShotJob, WorkflowStatus
+from animation_studio.core.models import ContinuityLedger, Episode, JobQueue, JobStatus, ProjectConfig, ShotJob, WorkflowStatus
 from animation_studio.media.ffmpeg import extract_representative_frames, run_command
 from animation_studio.media.qc import inspect_media, quality_report
+from animation_studio.providers.base import ProviderError, ProviderTask
 from animation_studio.storage.files import dump_model, load_model
 
 runner = CliRunner()
+
+
+def _remote_queue(tmp_path):
+    assert runner.invoke(app, ["project", "init", str(tmp_path)]).exit_code == 0
+    assert runner.invoke(app, ["episode", "init", "EP001", "--project-dir", str(tmp_path)]).exit_code == 0
+    config_file = tmp_path / "project.yaml"
+    config = load_model(config_file, ProjectConfig)
+    experimental_provider = config.provider.model_copy(update={"mode": "muse2api_experimental"})
+    dump_model(config.model_copy(update={"provider": experimental_provider}), config_file, overwrite=True)
+    queue_file = tmp_path / "episodes" / "EP001" / "generation" / "jobs.json"
+    dump_model(JobQueue(episode_id="EP001", jobs=[ShotJob(
+        job_id="JOB-REMOTE-001",
+        shot_id="SHOT_001",
+        provider_mode="muse2api_experimental",
+        status=JobStatus.QUEUED,
+        task_id="TASK_001",
+        prompt="Exact submitted prompt",
+        request_parameters={"duration_seconds": 1, "aspect_ratio": "16:9"},
+    )]), queue_file, overwrite=False)
+    return queue_file
 
 
 def test_project_and_episode_init_do_not_overwrite(tmp_path):
@@ -192,6 +213,63 @@ def test_manual_media_import_records_provenance_and_review_updates_job_and_ledge
     ])
     assert duplicate.exit_code != 0
     assert "must be awaiting manual media" in duplicate.output
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools are not installed")
+def test_generation_status_downloads_completed_result_and_records_provenance(tmp_path, monkeypatch):
+    queue_file = _remote_queue(tmp_path)
+    source = tmp_path / "mock-provider-result.mp4"
+    run_command([
+        shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+        "-i", "testsrc=size=96x64:rate=12:duration=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(source),
+    ])
+
+    class CompletedProvider:
+        def get_task(self, task_id):
+            assert task_id == "TASK_001"
+            return ProviderTask(task_id=task_id, status="completed", raw={"model": "mock-video-v1"})
+
+        def download_result(self, task, destination):
+            shutil.copyfile(source, destination)
+            return destination
+
+    provider = CompletedProvider()
+    monkeypatch.setattr("animation_studio.cli.main._make_provider", lambda *args, **kwargs: provider)
+    result = runner.invoke(app, ["generation", "status", str(queue_file), "--refresh"])
+
+    assert result.exit_code == 0, result.output
+    saved_job = load_model(queue_file, JobQueue).jobs[0]
+    output = tmp_path / saved_job.output_path
+    assert saved_job.status == JobStatus.GENERATED
+    assert output.is_file()
+    assert saved_job.provider_model == "mock-video-v1"
+    assert saved_job.source_media_name == "TASK_001.mp4"
+    assert saved_job.media_sha256 == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert saved_job.completed_at is not None
+    assert saved_job.media_metadata["duration_seconds"] > 0
+    assert saved_job.error is None
+
+
+def test_generation_status_persists_download_failure_without_marking_generated(tmp_path, monkeypatch):
+    queue_file = _remote_queue(tmp_path)
+
+    class UnavailableProvider:
+        def get_task(self, task_id):
+            return ProviderTask(task_id=task_id, status="completed", raw={})
+
+        def download_result(self, task, destination):
+            raise ProviderError("media URL unavailable")
+
+    provider = UnavailableProvider()
+    monkeypatch.setattr("animation_studio.cli.main._make_provider", lambda *args, **kwargs: provider)
+    result = runner.invoke(app, ["generation", "status", str(queue_file), "--refresh"])
+
+    assert result.exit_code != 0
+    assert "no resubmission was attempted" in result.output
+    saved_job = load_model(queue_file, JobQueue).jobs[0]
+    assert saved_job.status == JobStatus.QUEUED
+    assert saved_job.output_path is None
+    assert "media URL unavailable" in saved_job.error
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools are not installed")

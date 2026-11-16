@@ -44,6 +44,8 @@ uv run python -m animation_studio.cli.main continuity update projects/my-show/ep
 
 `generation import-media` chỉ nhận job `ManualProvider` đang chờ media. Lệnh kiểm tra clip bằng ffprobe, sao chép nó vào `episodes/EP001/clips/SHOT_001/`, không ghi đè file, rồi lưu output path, hash SHA-256, metadata media, model (nếu cung cấp) và thời điểm nhập vào job queue. Import không tự đánh dấu continuity đã review. Sau khi kiểm tra clip, `continuity update` ghi trạng thái quan sát vào ledger và chuyển job tương ứng từ `generated` sang `reviewed`.
 
+Với Muse2API thử nghiệm đã được bật, `generation status ... --refresh` poll task một lần và tải kết quả đã hoàn tất vào thư mục clips theo shot. CLI kiểm tra file tải về bằng ffprobe trước khi đánh dấu job `generated`; lỗi được lưu trong queue và không gửi lại generation request.
+
 Tạo cut list từ `templates/cut-list.yaml`, rồi render/QC:
 
 ```powershell

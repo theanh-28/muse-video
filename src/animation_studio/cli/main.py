@@ -209,6 +209,31 @@ def _summary_text(manifest: GenerationManifest) -> str:
     return "\n".join(lines)
 
 
+def _media_provenance(path: Path) -> tuple[dict[str, object], str]:
+    size = path.stat().st_size
+    if size <= 0:
+        raise MediaError("Media file is empty")
+    if size > MAX_IMPORTED_MEDIA_BYTES:
+        raise MediaError("Media exceeds the 2 GiB result limit")
+    summary = inspect_media(path)
+    if summary["duration_seconds"] <= 0 or summary["width"] <= 0 or summary["height"] <= 0:
+        raise MediaError("Media must have a positive duration and video dimensions")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    metadata: dict[str, object] = {
+        "duration_seconds": summary["duration_seconds"],
+        "width": summary["width"],
+        "height": summary["height"],
+        "fps": summary["fps"],
+        "video_codec": summary["video_codec"],
+        "audio_streams": summary["audio_streams"],
+        "size_bytes": size,
+    }
+    return metadata, digest.hexdigest()
+
+
 @project_app.command("init")
 def project_init(
     path: Path = typer.Argument(Path("."), help="Project root directory"),
@@ -558,26 +583,65 @@ def generation_status(
         config = _load_project(root)
         if config.provider.mode == "muse2api_experimental":
             provider = _make_provider(config, root)
-            jobs = []
-            for job in queue.jobs:
+            jobs = list(queue.jobs)
+            for index, job in enumerate(jobs):
                 if not job.task_id or job.status not in (JobStatus.QUEUED, JobStatus.RUNNING):
-                    jobs.append(job)
                     continue
                 try:
                     remote = provider.get_task(job.task_id)
                 except ProviderError as exc:
+                    jobs[index] = job.model_copy(update={
+                        "error": str(exc),
+                        "updated_at": datetime.now(timezone.utc),
+                    })
+                    queue = queue.model_copy(update={"jobs": jobs})
+                    dump_model(queue, queue_file, overwrite=True)
                     _fail(f"Polling stopped at {job.shot_id}; no resubmission was attempted: {exc}")
                 status = remote.status.lower()
                 if status in {"processing", "running"} and job.status == JobStatus.QUEUED:
                     job = transition_job(job, JobStatus.RUNNING)
                 elif status in {"completed", "succeeded", "success", "done"}:
-                    if job.status in (JobStatus.QUEUED, JobStatus.RUNNING):
-                        job = transition_job(job, JobStatus.GENERATED)
+                    try:
+                        if not re.fullmatch(r"[A-Za-z0-9_-]+", job.task_id):
+                            raise ProviderError("Invalid task ID for result path")
+                        relative_output = (
+                            Path("episodes") / queue.episode_id / "clips" / job.shot_id / f"{job.task_id}.mp4"
+                        )
+                        destination = resolve_inside(root, relative_output)
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        if not destination.exists():
+                            downloaded = provider.download_result(remote, destination).resolve()
+                            if downloaded != destination.resolve():
+                                raise ProviderError("Provider returned a result outside the requested project path")
+                        if not destination.is_file():
+                            raise ProviderError("Provider did not create a result file")
+                        metadata, digest = _media_provenance(destination)
+                    except (ProviderError, MediaError, OSError, StorageError) as exc:
+                        jobs[index] = job.model_copy(update={
+                            "error": f"Provider task completed, but result download/inspection failed: {exc}",
+                            "updated_at": datetime.now(timezone.utc),
+                        })
+                        queue = queue.model_copy(update={"jobs": jobs})
+                        dump_model(queue, queue_file, overwrite=True)
+                        _fail(f"Result could not be recorded for {job.shot_id}; no resubmission was attempted: {exc}")
+                    model_name = remote.raw.get("model") or remote.raw.get("model_name")
+                    job = transition_job(
+                        job,
+                        JobStatus.GENERATED,
+                        output_path=destination.relative_to(root).as_posix(),
+                        provider_model=model_name if isinstance(model_name, str) and model_name.strip() else None,
+                        source_media_name=destination.name,
+                        media_sha256=digest,
+                        completed_at=datetime.now(timezone.utc),
+                        media_metadata=metadata,
+                        error=None,
+                    )
                 elif status in {"failed", "error"} and job.status in (JobStatus.QUEUED, JobStatus.RUNNING):
                     job = transition_job(job, JobStatus.FAILED, error=str(remote.raw.get("error", "provider failed")))
-                jobs.append(job)
-            queue = queue.model_copy(update={"jobs": jobs})
-            dump_model(queue, queue_file, overwrite=True)
+                if jobs[index] != job:
+                    jobs[index] = job
+                    queue = queue.model_copy(update={"jobs": jobs})
+                    dump_model(queue, queue_file, overwrite=True)
     typer.echo(f"Episode {queue.episode_id}")
     if not queue.jobs:
         typer.echo("No jobs")

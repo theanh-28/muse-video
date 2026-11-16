@@ -1,0 +1,16 @@
+{
+  "shot_id": "SHOT_001",
+  "status": "NOT_REVIEWED",
+  "media_integrity": "NOT_VERIFIABLE",
+  "duration_check": "NOT_VERIFIABLE",
+  "character_consistency": "NOT_REVIEWED",
+  "costume_consistency": "NOT_REVIEWED",
+  "environment_consistency": "NOT_REVIEWED",
+  "action_compliance": "NOT_REVIEWED",
+  "camera_compliance": "NOT_REVIEWED",
+  "audio_review": "NOT_VERIFIABLE",
+  "continuity_to_next_shot": "NOT_REVIEWED",
+  "observed_issues": [],
+  "required_fixes": [],
+  "reviewed_frames": []
+}

@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+Thumbs.db
+# Never commit browser profiles, cookies, sessions or downloaded private media.
+data/
+sessions/
+profiles/
+*.cookie
+*cookie*.json
+*session*.json
+# Generated project media can be large/private; keep unless intentionally versioned.
+projects/*/clips/
+projects/*/references/private/
+projects/*/final/

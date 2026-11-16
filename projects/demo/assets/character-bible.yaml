@@ -1,0 +1,32 @@
+status: DRAFT
+characters:
+  - character_id: CHAR_A
+    canonical_name: Mai
+    role: Người trông đèn bến cảng
+    story_function: Giữ ánh đèn hiệu qua một cơn gió để mở lối vào bến.
+    immutable_identity:
+      age_range_appearance: Người trưởng thành trẻ
+      face: Mặt trái xoan, lông mày đậm, nốt ruồi nhỏ dưới mắt trái
+      hair: Tóc đen buộc thấp, vài sợi tóc ướt bên thái dương
+      body_build: Dáng nhỏ gọn, vai hơi xuôi
+      skin_or_surface: Da ngăm ấm
+      identifying_marks:
+        - Nốt ruồi nhỏ dưới mắt trái
+      voice_description: Giọng nữ ấm, bình tĩnh, nói ngắn gọn
+    continuity_locks:
+      - lock_id: CHAR_A_LOOK_01
+        category: appearance
+        locked_phrase: Mặt trái xoan, nốt ruồi nhỏ dưới mắt trái, tóc đen buộc thấp và dáng nhỏ gọn.
+        immutable: true
+    costumes:
+      - costume_id: COSTUME_A_01
+        description: Áo khoác đi biển màu xanh rêu đậm, cổ áo dựng, khăn len vàng nhạt quấn một vòng.
+        colors: [xanh rêu đậm, vàng nhạt, quần than chì]
+        accessories: [ủng cao su tối màu]
+        applies_to_shots: [SHOT_001, SHOT_002, SHOT_003, SHOT_004, SHOT_005]
+    reference_assets:
+      character_sheet: ""
+      front_view: ""
+      side_view: ""
+    notes:
+      - Chưa có hình tham chiếu được duyệt; giữ mô tả bằng chữ ở trạng thái DRAFT.

@@ -1,0 +1,12 @@
+episode_id: EP001
+updated_at: null
+source_of_truth: observed_media_over_storyboard_when_they_conflict
+last_completed_shot_id: null
+observations: []
+next_shot_handoff:
+  required_reference_images: []
+  required_locks: []
+  action_must_continue_from: ''
+  action_must_not_repeat: ''
+  screen_direction: ''
+  camera_handoff: ''

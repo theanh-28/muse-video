@@ -1,0 +1,587 @@
+episode_id: EP001
+title: Đèn qua sương
+language: vi-VN
+visual_style: 2D painterly animation, gouache texture, cool blue fog and warm amber
+  lantern light
+aspect_ratio: '16:9'
+target_fps: 30
+status: DRAFT
+characters:
+- CHAR_A
+locations:
+- LOC_01
+shots:
+- shot_id: SHOT_001
+  sequence_id: SEQ_001
+  order: 1
+  planned_duration_seconds: 10.0
+  continuity_level: C1
+  status: DRAFT
+  purpose: Giới thiệu Mai, cầu cảng và chiếc đèn đang tắt.
+  characters_on_screen:
+  - CHAR_A
+  characters_off_screen: []
+  start_state:
+    screen_position: Mai ở một phần ba trái; đèn đồng nằm trên trụ gỗ giữa khung hình.
+    body_orientation: Mai đứng nghiêng ba phần tư về bên phải khung hình.
+    eyeline: Nhìn xuống mặt sàn ướt, sau đó dừng ở chiếc đèn.
+    pose_or_motion: Đứng yên, vai hơi co vì gió.
+    left_hand: Thả dọc thân người.
+    right_hand: Giữ vạt áo khoác.
+    held_props: []
+    costume_condition: Áo khoác xanh rêu và khăn vàng nhạt, ướt nhẹ vì sương.
+    injuries_or_marks: Không có.
+    environment: Cầu cảng gỗ trong sương đêm; trụ đèn cố định ở giữa khung hình.
+    prop_positions:
+    - PROP_LANTERN đặt trên trụ gỗ
+    - đang tắt
+    lighting: Xanh lạnh; chưa có ánh vàng.
+    camera_state: Toàn cảnh tĩnh, ngang tầm mắt, cầu cảng dẫn từ trái sang phải.
+    story_state: Mai nhận ra đèn hiệu đã tắt.
+  action_beats:
+  - beat: 1
+    time_range: 0-3s
+    action: Sương lướt qua mặt cầu cảng; Mai nhìn xuống sàn ướt.
+    camera_change: Máy quay tiến chậm vào trung cảnh.
+    audio_cue: Gió biển nhẹ và tiếng nước vỗ dưới sàn gỗ.
+  - beat: 2
+    time_range: 3-7s
+    action: Mai nâng mắt và nhận ra chiếc đèn đang tắt trên trụ.
+    camera_change: Giữ hướng nhìn từ trái sang phải.
+    audio_cue: ''
+  - beat: 3
+    time_range: 7-10s
+    action: Mai nghiêng người về phía chiếc đèn nhưng chưa chạm vào.
+    camera_change: ''
+    audio_cue: Một tiếng gỗ kẽo kẹt ngắn.
+  end_state:
+    screen_position: Mai ở bên trái; chiếc đèn ở giữa, cả hai cùng nhìn thấy.
+    body_orientation: Mai hướng ba phần tư về chiếc đèn bên phải.
+    eyeline: Nhìn vào quai đèn.
+    pose_or_motion: Đang bắt đầu nghiêng người tới trước.
+    left_hand: Còn thả, cách quai đèn một khoảng.
+    right_hand: Buông vạt áo.
+    held_props: []
+    costume_condition: Không đổi so với đầu shot.
+    injuries_or_marks: Không có.
+    environment: Sương che đường chân trời; trụ đèn không đổi vị trí.
+    prop_positions:
+    - PROP_LANTERN trên trụ gỗ
+    - đang tắt
+    lighting: Xanh lạnh, không có ánh vàng.
+    camera_state: Trung cảnh, dolly-in nhẹ, kết thúc khi Mai bắt đầu với tay.
+    story_state: Mai quyết định kiểm tra đèn.
+  camera:
+    shot_size: Toàn cảnh chuyển dần sang trung cảnh
+    angle: Ngang tầm mắt
+    movement: Dolly-in rất chậm
+    lens_look: Góc nhìn tự nhiên, phối cảnh mềm
+    screen_direction: Mai trái, đèn giữa, mặt nước phải
+    focus: Giữ Mai và đèn cùng đọc được
+  lighting: Ánh đêm xanh lạnh; đèn chưa sáng.
+  audio:
+    dialogue: []
+    narration: ''
+    sfx:
+    - gió biển nhẹ
+    - nước vỗ
+    - sàn gỗ kẽo kẹt
+    music: Một nốt dây trầm, nhỏ.
+  references: []
+  reference_plan: Shot mở đầu; dùng Bible chữ DRAFT, chưa có ảnh nhân vật/địa điểm
+    được duyệt.
+  prompt: 'FORMAT: 10 seconds, C1, aspect ratio 16:9
+
+    SHOT: SHOT_001 — Giới thiệu Mai, cầu cảng và chiếc đèn đang tắt.
+
+    VISUAL STYLE: 2D painterly animation, gouache texture, cool blue fog and warm
+    amber lantern light
+
+    SUBJECT AND LOCKS:
+
+    - Mai (CHAR_A)
+
+    - age_range_appearance: Người trưởng thành trẻ
+
+    - face: Mặt trái xoan, lông mày đậm, nốt ruồi nhỏ dưới mắt trái
+
+    - hair: Tóc đen buộc thấp, vài sợi tóc ướt bên thái dương
+
+    - body_build: Dáng nhỏ gọn, vai hơi xuôi
+
+    - skin_or_surface: Da ngăm ấm
+
+    - identifying_marks: [''Nốt ruồi nhỏ dưới mắt trái'']
+
+    - voice_description: Giọng nữ ấm, bình tĩnh, nói ngắn gọn
+
+    - Mặt trái xoan, nốt ruồi nhỏ dưới mắt trái, tóc đen buộc thấp và dáng nhỏ gọn.
+
+    - CHAR_A_LOOK_01
+
+    - COSTUME_A_01
+
+    - LOC_01
+
+    - PROP_LANTERN
+
+    WORLD AND PROP LOCKS:
+
+    - LOC_01 Cầu cảng trong sương: Sàn gỗ hẹp chạy từ tiền cảnh trái ra mép nước bên
+    phải; trụ đèn cố định ở giữa khung hình.; landmarks trụ đèn gỗ thấp, ba cọc neo
+    bên phải, đường chân trời mờ; time Đêm muộn; weather Sương dày, gió biển giật
+    từng cơn; lighting Ánh xanh lạnh từ bầu trời đêm; ánh vàng chỉ phát ra từ chiếc
+    đèn đồng.; palette Xanh lam xám, nâu gỗ ướt, vàng hổ phách
+
+    - PROP_LANTERN Đèn đồng cầm tay: Đèn bão đồng nhỏ, kính hơi mờ, quai xách cong,
+    bánh đánh lửa tích hợp ở thân.; initial owner Đặt trên trụ gỗ giữa cầu cảng; state
+    rules Bắt đầu tắt., Sau khi đánh lửa, ngọn lửa vàng ổn định nhưng bị gió làm nghiêng.,
+    Mai giữ quai bằng tay trái từ shot 2 tới hết tập.
+
+    START STATE: {"screen_position":"Mai ở một phần ba trái; đèn đồng nằm trên trụ
+    gỗ giữa khung hình.","body_orientation":"Mai đứng nghiêng ba phần tư về bên phải
+    khung hình.","eyeline":"Nhìn xuống mặt sàn ướt, sau đó dừng ở chiếc đèn.","pose_or_motion":"Đứng
+    yên, vai hơi co vì gió.","left_hand":"Thả dọc thân người.","right_hand":"Giữ vạt
+    áo khoác.","held_props":[],"costume_condition":"Áo khoác xanh rêu và khăn vàng
+    nhạt, ướt nhẹ vì sương.","injuries_or_marks":"Không có.","environment":"Cầu cảng
+    gỗ trong sương đêm; trụ đèn cố định ở giữa khung hình.","prop_positions":["PROP_LANTERN
+    đặt trên trụ gỗ","đang tắt"],"lighting":"Xanh lạnh; chưa có ánh vàng.","camera_state":"Toàn
+    cảnh tĩnh, ngang tầm mắt, cầu cảng dẫn từ trái sang phải.","story_state":"Mai
+    nhận ra đèn hiệu đã tắt."}
+
+    SCENE: Cầu cảng gỗ trong sương đêm; trụ đèn cố định ở giữa khung hình.
+
+    ACTION OVER TIME:
+
+    1. 0-3s: Sương lướt qua mặt cầu cảng; Mai nhìn xuống sàn ướt. Camera: Máy quay
+    tiến chậm vào trung cảnh.. Sound: Gió biển nhẹ và tiếng nước vỗ dưới sàn gỗ..
+
+    2. 3-7s: Mai nâng mắt và nhận ra chiếc đèn đang tắt trên trụ. Camera: Giữ hướng
+    nhìn từ trái sang phải..
+
+    3. 7-10s: Mai nghiêng người về phía chiếc đèn nhưng chưa chạm vào. Sound: Một
+    tiếng gỗ kẽo kẹt ngắn..
+
+    END STATE: {"screen_position":"Mai ở bên trái; chiếc đèn ở giữa, cả hai cùng nhìn
+    thấy.","body_orientation":"Mai hướng ba phần tư về chiếc đèn bên phải.","eyeline":"Nhìn
+    vào quai đèn.","pose_or_motion":"Đang bắt đầu nghiêng người tới trước.","left_hand":"Còn
+    thả, cách quai đèn một khoảng.","right_hand":"Buông vạt áo.","held_props":[],"costume_condition":"Không
+    đổi so với đầu shot.","injuries_or_marks":"Không có.","environment":"Sương che
+    đường chân trời; trụ đèn không đổi vị trí.","prop_positions":["PROP_LANTERN trên
+    trụ gỗ","đang tắt"],"lighting":"Xanh lạnh, không có ánh vàng.","camera_state":"Trung
+    cảnh, dolly-in nhẹ, kết thúc khi Mai bắt đầu với tay.","story_state":"Mai quyết
+    định kiểm tra đèn."}
+
+    CAMERA: Toàn cảnh chuyển dần sang trung cảnh; Ngang tầm mắt; Dolly-in rất chậm;
+    Góc nhìn tự nhiên, phối cảnh mềm; focus Giữ Mai và đèn cùng đọc được; screen direction
+    Mai trái, đèn giữa, mặt nước phải
+
+    LIGHTING: Ánh đêm xanh lạnh; đèn chưa sáng.
+
+    AUDIO: gió biển nhẹ; nước vỗ; sàn gỗ kẽo kẹt; Một nốt dây trầm, nhỏ.
+
+    REFERENCE PLAN:
+
+    Shot mở đầu; dùng Bible chữ DRAFT, chưa có ảnh nhân vật/địa điểm được duyệt.
+
+    - None supplied; follow the written state and record continuity risk.
+
+    NEGATIVE CONSTRAINTS:
+
+    - Không thêm nhân vật
+
+    - thuyền
+
+    - diêm
+
+    - dụng cụ hoặc nguồn sáng khác.
+
+    QA TARGETS:
+
+    - Mai ở trái và đèn ở giữa; đèn vẫn tắt; không có nhân vật khác.'
+  negative_constraints:
+  - Không thêm nhân vật
+  - thuyền
+  - diêm
+  - dụng cụ hoặc nguồn sáng khác.
+  qa_checks:
+  - Mai ở trái và đèn ở giữa; đèn vẫn tắt; không có nhân vật khác.
+  depends_on: []
+  continuity_locks:
+  - CHAR_A_LOOK_01
+  - COSTUME_A_01
+  - LOC_01
+  - PROP_LANTERN
+  provider_capabilities_required: []
+- shot_id: SHOT_002
+  sequence_id: SEQ_001
+  order: 2
+  planned_duration_seconds: 10.0
+  continuity_level: C3
+  status: DRAFT
+  purpose: Mai nhấc chiếc đèn khỏi trụ.
+  characters_on_screen:
+  - CHAR_A
+  characters_off_screen: []
+  start_state:
+    screen_position: Mai trái, đèn giữa
+    body_orientation: Hướng về đèn
+    eyeline: Nhìn quai đèn
+    pose_or_motion: Đang với tay
+    left_hand: unspecified
+    right_hand: unspecified
+    held_props: []
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng trong sương đêm
+    prop_positions:
+    - PROP_LANTERN trên trụ gỗ
+    lighting: Xanh lạnh
+    camera_state: Trung cảnh ngang tầm mắt
+    story_state: Mai bắt đầu kiểm tra đèn
+  action_beats:
+  - beat: 1
+    time_range: 0-3s
+    action: Mai khép tay trái quanh quai đèn.
+    camera_change: ''
+    audio_cue: Tiếng kim loại chạm nhẹ.
+  - beat: 2
+    time_range: 3-7s
+    action: Mai nhấc đèn khỏi trụ bằng một chuyển động liền mạch.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 3
+    time_range: 7-10s
+    action: Mai giữ đèn ngang hông và nhìn qua lớp kính mờ.
+    camera_change: ''
+    audio_cue: ''
+  end_state:
+    screen_position: Mai bên trái, đèn ngang hông
+    body_orientation: Nghiêng ba phần tư về phải
+    eyeline: Nhìn vào thân đèn
+    pose_or_motion: Đứng vững sau khi nhấc
+    left_hand: Nắm quai PROP_LANTERN
+    right_hand: Giữ nhẹ thân đèn
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng trong sương
+    prop_positions:
+    - Đèn trong tay trái Mai
+    lighting: Xanh lạnh
+    camera_state: Trung cảnh tĩnh
+    story_state: Đèn vẫn tắt
+  camera:
+    shot_size: Trung cảnh
+    angle: Ngang tầm mắt
+    movement: Giữ ổn định
+    lens_look: Phối cảnh tự nhiên
+    screen_direction: Mai trái, đèn giữa
+    focus: Ưu tiên tay và quai đèn
+  lighting: Ánh đêm xanh lạnh.
+  audio:
+    dialogue: []
+    narration: ''
+    sfx:
+    - vải áo sột soạt
+    - tiếng kim loại khẽ
+    music: giữ nốt trầm
+  references: []
+  reference_plan: Chỉ tạo prompt sau khi SHOT_001 được review; dùng last frame thực
+    tế làm ảnh tham chiếu.
+  prompt: ''
+  negative_constraints:
+  - Không lặp lại động tác cúi nhìn; không thêm diêm hoặc props; đèn vẫn tắt.
+  qa_checks:
+  - Đèn rời khỏi trụ và nằm trong tay trái Mai; không đổi trang phục.
+  depends_on:
+  - SHOT_001
+  continuity_locks:
+  - CHAR_A_LOOK_01
+  - COSTUME_A_01
+  - LOC_01
+  - PROP_LANTERN
+  provider_capabilities_required:
+  - image_reference
+- shot_id: SHOT_003
+  sequence_id: SEQ_001
+  order: 3
+  planned_duration_seconds: 10.0
+  continuity_level: C3
+  status: DRAFT
+  purpose: Mai dùng bánh đánh lửa tích hợp để thắp đèn.
+  characters_on_screen:
+  - CHAR_A
+  characters_off_screen: []
+  start_state:
+    screen_position: Mai trái, đèn ngang hông
+    body_orientation: Hướng ba phần tư về phải
+    eyeline: Nhìn vào bánh đánh lửa
+    pose_or_motion: Giữ đèn ổn định
+    left_hand: Giữ quai
+    right_hand: Đặt ngón cái lên bánh đánh lửa tích hợp
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng trong sương
+    prop_positions:
+    - Đèn trong tay trái Mai
+    lighting: Xanh lạnh
+    camera_state: Trung cảnh gần
+    story_state: Đèn tắt, Mai chuẩn bị đánh lửa
+  action_beats:
+  - beat: 1
+    time_range: 0-3s
+    action: Mai giữ chắc quai đèn bằng tay trái.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 2
+    time_range: 3-7s
+    action: Tay phải xoay bánh đánh lửa tích hợp; một tia lửa bắt vào bấc.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 3
+    time_range: 7-10s
+    action: Ngọn lửa vàng ổn định sau một nhịp chập chờn.
+    camera_change: ''
+    audio_cue: Tiếng bánh xe bật và tiếng lửa bén nhỏ.
+  end_state:
+    screen_position: Mai trái, đèn giữa ngang hông
+    body_orientation: Hướng vào đèn
+    eyeline: Nhìn ngọn lửa
+    pose_or_motion: Đứng yên che gió
+    left_hand: Giữ quai
+    right_hand: Chắn gió trước kính
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng trong sương
+    prop_positions:
+    - Đèn sáng trong tay trái Mai
+    lighting: Vùng vàng ấm trên tay và mặt, nền xanh lạnh
+    camera_state: Trung cảnh gần
+    story_state: Đèn đã cháy
+  camera:
+    shot_size: Cận trung
+    angle: Ngang tầm mắt
+    movement: Push-in nhẹ
+    lens_look: DOF nông vừa phải
+    screen_direction: Giữ Mai trái và đèn giữa
+    focus: Bánh đánh lửa rồi chuyển sang ngọn lửa
+  lighting: Ánh xanh lạnh cùng vùng vàng nhỏ từ đèn.
+  audio:
+    dialogue: []
+    narration: ''
+    sfx:
+    - bánh đánh lửa bật
+    - gió giảm nhẹ
+    - lửa bén
+    music: thêm một nốt ấm
+  references: []
+  reference_plan: Chỉ tạo prompt sau khi SHOT_002 được review; dùng last frame thực
+    tế.
+  prompt: ''
+  negative_constraints:
+  - Không tạo diêm
+  - bật lửa rời hoặc nguồn sáng khác; lửa không bùng lớn.
+  qa_checks:
+  - Bánh đánh lửa thuộc thân đèn; ngọn lửa nhỏ và vàng; tay trái vẫn giữ quai.
+  depends_on:
+  - SHOT_002
+  continuity_locks:
+  - CHAR_A_LOOK_01
+  - COSTUME_A_01
+  - LOC_01
+  - PROP_LANTERN
+  provider_capabilities_required:
+  - image_reference
+- shot_id: SHOT_004
+  sequence_id: SEQ_001
+  order: 4
+  planned_duration_seconds: 10.0
+  continuity_level: C3
+  status: DRAFT
+  purpose: Mai nâng đèn lên cao để ánh sáng vượt qua lớp sương.
+  characters_on_screen:
+  - CHAR_A
+  characters_off_screen: []
+  start_state:
+    screen_position: Mai trái, đèn ngang hông
+    body_orientation: Hướng về phía phải cầu cảng
+    eyeline: Nhìn qua làn sương
+    pose_or_motion: Giữ đèn đang sáng
+    left_hand: Nắm quai đèn
+    right_hand: Che gió cạnh kính
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng trong sương
+    prop_positions:
+    - Đèn sáng trong tay Mai
+    lighting: Đêm xanh với vùng vàng nhỏ
+    camera_state: Trung cảnh
+    story_state: Mai chuẩn bị nâng đèn
+  action_beats:
+  - beat: 1
+    time_range: 0-4s
+    action: Mai xoay vai về hướng mép nước.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 2
+    time_range: 4-8s
+    action: Mai nâng đèn bằng tay trái lên ngang vai.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 3
+    time_range: 8-10s
+    action: Luồng sáng quét qua sương và để lộ đường mép cầu cảng.
+    camera_change: ''
+    audio_cue: Gió rít qua cọc neo.
+  end_state:
+    screen_position: Mai trái, đèn ngang vai ở trung tâm
+    body_orientation: Hướng ra mặt nước bên phải
+    eyeline: Nhìn dọc luồng sáng
+    pose_or_motion: Đứng vững
+    left_hand: Giữ quai trên cao
+    right_hand: Hạ xuống cạnh thân
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Sương được rọi vàng một vùng hẹp
+    prop_positions:
+    - Đèn sáng ngang vai
+    lighting: Vàng hổ phách trên sương, nền xanh lạnh
+    camera_state: Trung cảnh chuyển sang bán toàn
+    story_state: Ánh đèn đã vượt qua sương
+  camera:
+    shot_size: Trung cảnh sang bán toàn
+    angle: Hơi thấp
+    movement: Tilt-up chậm
+    lens_look: Phối cảnh mềm
+    screen_direction: Luồng sáng từ trái qua phải
+    focus: Mai rồi vùng sáng
+  lighting: Đèn vàng cắt một dải sương; không thêm nguồn sáng ngoài khung.
+  audio:
+    dialogue: []
+    narration: ''
+    sfx:
+    - gió mạnh hơn
+    - cọc neo rung khẽ
+    music: hòa âm ấm mở rộng
+  references: []
+  reference_plan: Chỉ tạo prompt sau khi SHOT_003 được review; dùng last frame thực
+    tế.
+  prompt: ''
+  negative_constraints:
+  - Không đổi tay cầm; không để đèn tắt; không thêm vật thể trong sương.
+  qa_checks:
+  - Đèn vẫn ở tay trái; hướng sáng sang phải; trụ đèn và cọc neo giữ vị trí.
+  depends_on:
+  - SHOT_003
+  continuity_locks:
+  - CHAR_A_LOOK_01
+  - COSTUME_A_01
+  - LOC_01
+  - PROP_LANTERN
+  provider_capabilities_required:
+  - image_reference
+- shot_id: SHOT_005
+  sequence_id: SEQ_001
+  order: 5
+  planned_duration_seconds: 10.0
+  continuity_level: C3
+  status: DRAFT
+  purpose: Kết tập bằng hình ảnh Mai giữ đèn sáng giữa màn sương.
+  characters_on_screen:
+  - CHAR_A
+  characters_off_screen: []
+  start_state:
+    screen_position: Mai trái, đèn cao ngang vai
+    body_orientation: Hướng ra mặt nước bên phải
+    eyeline: Theo luồng sáng
+    pose_or_motion: Đứng vững giữa gió
+    left_hand: Giữ quai
+    right_hand: Thả lỏng
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng và sương đêm
+    prop_positions:
+    - Đèn sáng ngang vai
+    lighting: Dải vàng mảnh trong nền xanh
+    camera_state: Bán toàn
+    story_state: Ánh đèn vừa mở được một lối nhìn
+  action_beats:
+  - beat: 1
+    time_range: 0-4s
+    action: Gió giật làm ngọn lửa nghiêng nhưng không tắt.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 2
+    time_range: 4-7s
+    action: Mai bước một bước ngắn về phía trụ đèn, vẫn giữ đèn cao.
+    camera_change: ''
+    audio_cue: ''
+  - beat: 3
+    time_range: 7-10s
+    action: Máy quay lùi nhẹ, để Mai và vệt sáng nhỏ lại giữa sương.
+    camera_change: ''
+    audio_cue: Gió dịu dần và nước vỗ đều.
+  end_state:
+    screen_position: Mai ở một phần ba trái, đèn là điểm vàng giữa màn sương
+    body_orientation: Hướng ra nước
+    eyeline: Nhìn theo lối sáng
+    pose_or_motion: Đứng yên giữ đèn cao
+    left_hand: Giữ quai
+    right_hand: Buông cạnh thân
+    held_props:
+    - PROP_LANTERN
+    costume_condition: unspecified
+    injuries_or_marks: none
+    environment: Cầu cảng dần chìm vào xanh xám
+    prop_positions:
+    - Đèn sáng trong tay Mai
+    lighting: Một đốm vàng ấm còn rõ, nền xanh lạnh
+    camera_state: Toàn cảnh lùi chậm
+    story_state: Mai quyết định ở lại giữ đèn
+  camera:
+    shot_size: Bán toàn sang toàn cảnh
+    angle: Ngang tầm mắt
+    movement: Dolly-out chậm
+    lens_look: Phối cảnh rộng nhẹ
+    screen_direction: Giữ Mai ở trái
+    focus: Toàn cảnh rõ vừa
+  lighting: Đốm đèn vàng nổi trên nền sương xanh; không thêm đèn khác.
+  audio:
+    dialogue: []
+    narration: ''
+    sfx:
+    - gió dịu
+    - nước vỗ đều
+    music: kết bằng hợp âm ấm nhẹ
+  references: []
+  reference_plan: Chỉ tạo prompt sau khi SHOT_004 được review; dùng last frame thực
+    tế.
+  prompt: ''
+  negative_constraints:
+  - Không thêm thuyền
+  - người
+  - tòa nhà sáng đèn hoặc props mới.
+  qa_checks:
+  - Mai và đèn giữ đúng phía; ngọn lửa không tắt; shot kết thúc êm
+  - không thêm nhân vật.
+  depends_on:
+  - SHOT_004
+  continuity_locks:
+  - CHAR_A_LOOK_01
+  - COSTUME_A_01
+  - LOC_01
+  - PROP_LANTERN
+  provider_capabilities_required:
+  - image_reference

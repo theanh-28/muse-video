@@ -1,0 +1,16 @@
+locations:
+  - location_id: LOC_01
+    canonical_name: ""
+    geography: ""
+    fixed_landmarks: []
+    time_of_day: ""
+    weather: ""
+    lighting_lock: ""
+    palette_lock: ""
+    reference_assets: []
+props:
+  - prop_id: PROP_01
+    canonical_name: ""
+    appearance: ""
+    initial_owner: ""
+    state_rules: []

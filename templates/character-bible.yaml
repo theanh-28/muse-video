@@ -1,0 +1,31 @@
+character_id: CHAR_A
+canonical_name: ""
+role: ""
+story_function: ""
+immutable_identity:
+  age_range_appearance: ""
+  face: ""
+  hair: ""
+  body_build: ""
+  skin_or_surface: ""
+  identifying_marks: []
+  voice_description: ""
+continuity_locks:
+  - lock_id: CHAR_A_LOOK_01
+    category: appearance
+    locked_phrase: ""
+    immutable: true
+costumes:
+  - costume_id: COSTUME_A_01
+    description: ""
+    colors: []
+    accessories: []
+    applies_to_shots: []
+reference_assets:
+  character_sheet: ""
+  front_view: ""
+  side_view: ""
+  back_view: ""
+  expressions: ""
+  poses: ""
+notes: []

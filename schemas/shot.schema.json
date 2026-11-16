@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/shot.schema.json",
+  "title": "Animation Shot",
+  "type": "object",
+  "required": ["shot_id", "sequence_id", "planned_duration_seconds", "continuity_level", "purpose", "characters_on_screen", "start_state", "action_beats", "end_state", "camera", "references", "reference_plan", "qa_checks"],
+  "properties": {
+    "shot_id": {"type": "string", "pattern": "^[A-Z0-9_-]+$"},
+    "sequence_id": {"type": "string"},
+    "order": {"type": "integer", "minimum": 1},
+    "planned_duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "continuity_level": {"enum": ["C0", "C1", "C2", "C3"]},
+    "status": {"enum": ["PLAN", "DRAFT", "APPROVED", "GENERATING", "GENERATED", "QC_PASSED", "EXPORTED"]},
+    "purpose": {"type": "string", "minLength": 1},
+    "characters_on_screen": {"type": "array", "items": {"type": "string"}},
+    "characters_off_screen": {"type": "array", "items": {"type": "string"}},
+    "start_state": {"$ref": "#/$defs/state"},
+    "action_beats": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["beat", "action"], "properties": {"time_range": {"type": "string"}, "beat": {"type": "integer", "minimum": 1}, "action": {"type": "string"}, "camera_change": {"type": "string"}, "audio_cue": {"type": "string"}}}},
+    "end_state": {"$ref": "#/$defs/state"},
+    "camera": {"type": "object", "required": ["shot_size", "angle", "movement"], "properties": {"shot_size": {"type": "string"}, "angle": {"type": "string"}, "lens_look": {"type": "string"}, "movement": {"type": "string"}, "screen_direction": {"type": "string"}}},
+    "lighting": {"type": "string"},
+    "audio": {"type": "object", "properties": {"dialogue": {"type": "array", "items": {"type": "string"}}, "narration": {"type": "string"}, "sfx": {"type": "array", "items": {"type": "string"}}, "music": {"type": "string"}}},
+    "references": {"type": "array", "items": {"type": "object", "required": ["path", "role"], "properties": {"path": {"type": "string"}, "role": {"type": "string"}, "governs": {"type": "string"}, "media_type": {"enum": ["image", "video", "audio", "file"]}}}},
+    "reference_plan": {"type": "string", "minLength": 1},
+    "prompt": {"type": "string", "minLength": 1},
+    "negative_constraints": {"type": "array", "items": {"type": "string"}},
+    "continuity_locks": {"type": "array", "items": {"type": "string"}},
+    "qa_checks": {"type": "array", "items": {"type": "string"}},
+    "depends_on": {"type": "array", "items": {"type": "string"}},
+    "provider_capabilities_required": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "state": {
+      "type": "object",
+      "required": ["screen_position", "body_orientation", "eyeline", "pose_or_motion", "held_props", "environment", "camera_state"],
+      "properties": {
+        "screen_position": {"type": "string"},
+        "body_orientation": {"type": "string"},
+        "eyeline": {"type": "string"},
+        "pose_or_motion": {"type": "string"},
+        "left_hand": {"type": "string"},
+        "right_hand": {"type": "string"},
+        "held_props": {"type": "array", "items": {"type": "string"}},
+        "costume_condition": {"type": "string"},
+        "injuries_or_marks": {"type": "string"},
+        "environment": {"type": "string"},
+        "prop_positions": {"type": "array", "items": {"type": "string"}},
+        "lighting": {"type": "string"},
+        "camera_state": {"type": "string"},
+        "story_state": {"type": "string"}
+      }
+    }
+  }
+}

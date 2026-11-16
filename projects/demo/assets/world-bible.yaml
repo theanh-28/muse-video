@@ -1,0 +1,21 @@
+status: DRAFT
+locations:
+  - location_id: LOC_01
+    canonical_name: Cầu cảng trong sương
+    geography: Sàn gỗ hẹp chạy từ tiền cảnh trái ra mép nước bên phải; trụ đèn cố định ở giữa khung hình.
+    fixed_landmarks: [trụ đèn gỗ thấp, ba cọc neo bên phải, đường chân trời mờ]
+    time_of_day: Đêm muộn
+    weather: Sương dày, gió biển giật từng cơn
+    lighting_lock: Ánh xanh lạnh từ bầu trời đêm; ánh vàng chỉ phát ra từ chiếc đèn đồng.
+    palette_lock: Xanh lam xám, nâu gỗ ướt, vàng hổ phách
+    reference_assets: []
+props:
+  - prop_id: PROP_LANTERN
+    canonical_name: Đèn đồng cầm tay
+    appearance: Đèn bão đồng nhỏ, kính hơi mờ, quai xách cong, bánh đánh lửa tích hợp ở thân.
+    initial_owner: Đặt trên trụ gỗ giữa cầu cảng
+    state_rules:
+      - Bắt đầu tắt.
+      - Sau khi đánh lửa, ngọn lửa vàng ổn định nhưng bị gió làm nghiêng.
+      - Mai giữ quai bằng tay trái từ shot 2 tới hết tập.
+    reference_assets: []

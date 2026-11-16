@@ -1,0 +1,32 @@
+project:
+  id: den-qua-suong
+  title: Đèn qua sương
+  language: vi-VN
+  genre: hoạt hình ngắn, gia đình
+  visual_style: 2D painterly animation, màu gouache dịu, ánh đèn vàng ấm tương phản sương xanh lam
+output:
+  aspect_ratio: '16:9'
+  target_width: 1920
+  target_height: 1080
+  target_fps: 30
+  container: mp4
+  video_codec: libx264
+  audio_codec: aac
+production:
+  target_shot_duration_seconds: 10.0
+  max_concurrent_jobs: 1
+  max_retries: 1
+  require_approval_before_generation: true
+  sequential_continuity_generation: true
+provider:
+  mode: manual
+  base_url: http://127.0.0.1:18610/v1
+  api_key_env: MUSE2API_API_KEY
+  verified_for_submission: false
+  supports_image_reference: null
+  supports_video_reference: null
+  supports_snapshot_continuation: null
+  max_duration_seconds: null
+paths:
+  projects_dir: projects
+  output_dir: output

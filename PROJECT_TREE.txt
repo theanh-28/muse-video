@@ -1,0 +1,39 @@
+muse-animation-studio-starter/
+├── AGENTS.md
+├── README_VI.md
+├── .agents/skills/README.md
+├── config/project.example.yaml
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── CONTINUITY_SPEC.md
+│   ├── GENERATION_SAFETY.md
+│   ├── RESEARCH_NOTES.md
+│   ├── THIRD_PARTY_SKILLS.md
+│   └── WORKFLOW.md
+├── prompts/
+│   ├── 00_START_WITH_CODEX.md
+│   ├── 01_CREATE_EPISODE.md
+│   └── 02_REVIEW_CONTINUITY.md
+├── projects/_template/
+│   ├── script/ characters/ locations/ storyboard/ prompts/
+│   ├── references/ clips/ audio/ subtitles/ final/ reports/
+│   └── README.md
+├── schemas/
+│   ├── episode.schema.json
+│   └── shot.schema.json
+├── scripts/extract_frames.py
+├── src/animation_studio/
+│   ├── core/ providers/ services/ media/ storage/ cli/
+│   └── README.md
+├── templates/
+│   ├── character-bible.yaml
+│   ├── continuity-ledger.yaml
+│   ├── muse-prompt-template.md
+│   ├── project-bible.md
+│   ├── qc-report.json
+│   ├── shot-template.md
+│   └── world-bible.yaml
+├── tests/
+├── .env.example
+├── .gitignore
+└── pyproject.toml

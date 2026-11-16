@@ -55,10 +55,17 @@ def build_manifest(
 
 def approval_fingerprint(manifest: GenerationManifest) -> str:
     body = {
+        "manifest_version": manifest.manifest_version,
+        "manifest_id": manifest.manifest_id,
+        "created_at": manifest.created_at.isoformat(),
         "episode_id": manifest.episode_id,
         "provider_mode": manifest.provider_mode,
         "smoke_test": manifest.smoke_test,
         "requests": [item.model_dump(mode="json") for item in manifest.requests],
+        "usage_estimate": manifest.usage_estimate,
+        "budget_limit": manifest.budget_limit,
+        "approved_by": manifest.approved_by,
+        "approved_at": manifest.approved_at.isoformat() if manifest.approved_at else None,
     }
     encoded = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
@@ -77,14 +84,15 @@ def approve_manifest(
         raise ManifestError("A budget limit is required before approval")
     if not approved_by.strip():
         raise ManifestError("approved_by must identify the user who reviewed the manifest")
-    return manifest.model_copy(update={
+    approved = manifest.model_copy(update={
         "status": "APPROVED",
         "usage_estimate": usage_estimate.strip(),
         "budget_limit": budget_limit.strip(),
         "approved_by": approved_by.strip(),
         "approved_at": datetime.now(timezone.utc),
-        "approved_request_hash": approval_fingerprint(manifest),
+        "approved_request_hash": None,
     })
+    return approved.model_copy(update={"approved_request_hash": approval_fingerprint(approved)})
 
 
 def ensure_approved_unchanged(manifest: GenerationManifest) -> None:
@@ -93,5 +101,5 @@ def ensure_approved_unchanged(manifest: GenerationManifest) -> None:
     if not manifest.usage_estimate or not manifest.budget_limit or not manifest.approved_by:
         raise ManifestError("Manifest is missing its usage, budget or approval record")
     if manifest.approved_request_hash != approval_fingerprint(manifest):
-        raise ManifestError("Manifest requests changed after approval; plan and approve again")
+        raise ManifestError("Manifest or approval record changed after approval; plan and approve again")
 

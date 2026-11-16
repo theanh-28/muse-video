@@ -451,7 +451,7 @@ def generation_approve(
         dump_model(approved, manifest_file, overwrite=True)
     except (ValidationError, ManifestError, OSError, StorageError) as exc:
         _fail(str(exc))
-    typer.echo(f"Approved manifest {approved.manifest_id}; request hash {approved.approved_request_hash}")
+    typer.echo(f"Approved manifest {approved.manifest_id}; approval fingerprint {approved.approved_request_hash}")
 
 
 def _make_provider(config: ProjectConfig, root: Path, *, allow_smoke_test: bool = False):

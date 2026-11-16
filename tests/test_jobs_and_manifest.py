@@ -58,8 +58,16 @@ def test_approved_manifest_hash_detects_prompt_change(episode_factory):
     )
     ensure_approved_unchanged(approved)
     changed = approved.model_copy(update={"requests": [approved.requests[0].model_copy(update={"prompt": "changed"})]})
-    with pytest.raises(ManifestError, match="changed after approval"):
-        ensure_approved_unchanged(changed)
+    altered = [
+        changed,
+        approved.model_copy(update={"usage_estimate": "free"}),
+        approved.model_copy(update={"budget_limit": "unlimited"}),
+        approved.model_copy(update={"approved_by": "different reviewer"}),
+        approved.model_copy(update={"approved_at": approved.approved_at.replace(year=approved.approved_at.year - 1)}),
+    ]
+    for item in altered:
+        with pytest.raises(ManifestError, match="changed after approval"):
+            ensure_approved_unchanged(item)
 
 
 def test_manifest_only_includes_exact_requested_shot(episode_factory, make_shot):

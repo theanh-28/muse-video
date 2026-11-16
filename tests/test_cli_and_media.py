@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from animation_studio.cli.main import app
-from animation_studio.core.models import Episode, WorkflowStatus
+from animation_studio.core.models import ContinuityLedger, Episode, WorkflowStatus
 from animation_studio.media.ffmpeg import extract_representative_frames, run_command
 from animation_studio.media.qc import inspect_media, quality_report
 from animation_studio.storage.files import dump_model, load_model
@@ -35,6 +35,38 @@ def test_storyboard_validate_reports_empty_episode(tmp_path):
     result = runner.invoke(app, ["storyboard", "validate", str(tmp_path / "episodes" / "EP001" / "episode.yaml")])
     assert result.exit_code != 0
     assert "at least one shot" in result.output
+
+
+def test_continuity_update_resolves_project_relative_frames_from_project_root(tmp_path, monkeypatch, make_shot, state):
+    project_root = tmp_path / "project"
+    assert runner.invoke(app, ["project", "init", str(project_root)]).exit_code == 0
+    assert runner.invoke(app, ["episode", "init", "EP001", "--project-dir", str(project_root)]).exit_code == 0
+
+    episode_file = project_root / "episodes" / "EP001" / "episode.yaml"
+    episode = load_model(episode_file, Episode).model_copy(update={"shots": [make_shot()]})
+    dump_model(episode, episode_file, overwrite=True)
+    frames_dir = project_root / "review_frames"
+    frames_dir.mkdir()
+    for frame_name in ("first", "middle", "last"):
+        (frames_dir / f"{frame_name}.png").write_bytes(b"test-frame")
+    state_file = project_root / "observed-end-state.json"
+    dump_model(state, state_file, overwrite=False)
+
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, [
+        "continuity", "update", str(episode_file),
+        "--shot-id", "SHOT_001",
+        "--actual-end-state", str(state_file),
+        "--frames-dir", "review_frames",
+    ])
+
+    assert result.exit_code == 0, result.output
+    ledger = load_model(episode_file.parent / "continuity-ledger.yaml", ContinuityLedger)
+    observation = ledger.observations[0]
+    assert observation.status == "reviewed"
+    assert observation.extracted_frames == {
+        name: str(frames_dir / f"{name}.png") for name in ("first", "middle", "last")
+    }
 
 
 def test_cli_generation_gate_requires_storyboard_approval_and_manual_submit_is_non_generating(tmp_path, make_shot):

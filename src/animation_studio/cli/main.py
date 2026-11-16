@@ -608,7 +608,7 @@ def continuity_update(
     episode_file: Path = typer.Argument(..., exists=True, dir_okay=False),
     shot_id: str = typer.Option(..., "--shot-id"),
     actual_end_state_file: Path = typer.Option(..., "--actual-end-state", exists=True, dir_okay=False),
-    frames_dir: Path = typer.Option(..., "--frames-dir", exists=True, file_okay=False),
+    frames_dir: Path = typer.Option(..., "--frames-dir", file_okay=False),
     note: list[str] = typer.Option([], "--note", help="Observation or inference note; repeat as needed"),
     risk: list[str] = typer.Option([], "--risk", help="Continuity risk; repeat as needed"),
 ) -> None:
@@ -617,11 +617,13 @@ def continuity_update(
         _fail(f"Shot not found in storyboard: {shot_id}")
     root = _find_project_root(episode_file)
     try:
-        resolve_inside(root, frames_dir)
+        resolved_frames_dir = resolve_inside(root, frames_dir)
+        if not resolved_frames_dir.is_dir():
+            _fail(f"Frames directory not found inside project: {resolved_frames_dir}")
         state = load_model(actual_end_state_file, ShotState)
     except (ValidationError, OSError, StorageError) as exc:
         _fail(f"Invalid observed end state: {exc}")
-    frame_paths = {label: frames_dir.resolve() / f"{label}.png" for label in ("first", "middle", "last")}
+    frame_paths = {label: resolved_frames_dir / f"{label}.png" for label in ("first", "middle", "last")}
     missing = [str(path) for path in frame_paths.values() if not path.is_file()]
     if missing:
         _fail("Missing representative frame(s): " + ", ".join(missing))

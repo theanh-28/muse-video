@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import getpass
+import hashlib
 import json
 import os
 import re
@@ -70,6 +71,7 @@ prompts_app = typer.Typer(help="Prompt package", no_args_is_help=True)
 generation_app = typer.Typer(help="Generation manifest and job lifecycle", no_args_is_help=True)
 media_app = typer.Typer(help="Media inspection", no_args_is_help=True)
 continuity_app = typer.Typer(help="Continuity ledger", no_args_is_help=True)
+MAX_IMPORTED_MEDIA_BYTES = 2 * 1024 * 1024 * 1024
 
 # Some Windows launchers expose a legacy console encoding (for example cp1252).
 # Keep Unicode storyboard content from crashing CLI output in those terminals.
@@ -585,6 +587,100 @@ def generation_status(
             typer.echo(f"  error: {job.error}")
 
 
+@generation_app.command("import-media")
+def generation_import_media(
+    queue_file: Path = typer.Argument(..., exists=True, dir_okay=False),
+    shot_id: str = typer.Option(..., "--shot-id"),
+    media_file: Path = typer.Option(..., "--media-file", exists=True, dir_okay=False),
+    provider_model: str | None = typer.Option(None, "--provider-model", help="Model name/version used in the external UI, if known"),
+) -> None:
+    try:
+        queue = load_model(queue_file, JobQueue)
+    except (ValidationError, OSError, StorageError) as exc:
+        _fail(f"Cannot load job queue {queue_file}: {exc}")
+    matches = [job for job in queue.jobs if job.shot_id == shot_id]
+    if len(matches) != 1:
+        _fail(f"Expected one job for {shot_id}; found {len(matches)}")
+    job = matches[0]
+    if job.provider_mode != "manual":
+        _fail(f"{shot_id} uses {job.provider_mode}; import-media only accepts ManualProvider jobs")
+    if job.status != JobStatus.AWAITING_MANUAL_MEDIA:
+        _fail(f"{shot_id} must be awaiting manual media, current status is {job.status}")
+
+    root = _find_project_root(queue_file)
+    episode_file = root / "episodes" / queue.episode_id / "episode.yaml"
+    episode = _load_episode(episode_file)
+    if episode.episode_id != queue.episode_id:
+        _fail("Job queue episode_id does not match the episode storyboard")
+    if shot_id not in {shot.shot_id for shot in episode.shots}:
+        _fail(f"Shot not found in storyboard: {shot_id}")
+
+    source = media_file.resolve()
+    try:
+        source_size = source.stat().st_size
+    except OSError as exc:
+        _fail(f"Cannot inspect source media {source}: {exc}")
+    if source_size <= 0:
+        _fail("Manual media file is empty")
+    if source_size > MAX_IMPORTED_MEDIA_BYTES:
+        _fail(f"Manual media exceeds the 2 GiB import limit: {source}")
+    try:
+        summary = inspect_media(source)
+    except (MediaError, OSError, ValueError) as exc:
+        _fail(f"Manual media failed ffprobe inspection: {exc}")
+    if summary["duration_seconds"] <= 0 or summary["width"] <= 0 or summary["height"] <= 0:
+        _fail("Manual media must have a positive duration and video dimensions")
+
+    relative_output = Path("episodes") / queue.episode_id / "clips" / shot_id / source.name
+    try:
+        destination = resolve_inside(root, relative_output)
+    except StorageError as exc:
+        _fail(str(exc))
+    if destination.exists():
+        _fail(f"Refusing to overwrite imported media: {destination}")
+
+    digest = hashlib.sha256()
+    created_output = False
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with source.open("rb") as incoming, destination.open("xb") as outgoing:
+            created_output = True
+            while chunk := incoming.read(1024 * 1024):
+                digest.update(chunk)
+                outgoing.write(chunk)
+        imported_at = datetime.now(timezone.utc)
+        metadata = {
+            "duration_seconds": summary["duration_seconds"],
+            "width": summary["width"],
+            "height": summary["height"],
+            "fps": summary["fps"],
+            "video_codec": summary["video_codec"],
+            "audio_streams": summary["audio_streams"],
+            "size_bytes": summary["size_bytes"],
+        }
+        updated_job = transition_job(
+            job,
+            JobStatus.GENERATED,
+            output_path=destination.relative_to(root).as_posix(),
+            provider_model=provider_model.strip() if provider_model and provider_model.strip() else None,
+            source_media_name=source.name,
+            media_sha256=digest.hexdigest(),
+            media_imported_at=imported_at,
+            completed_at=imported_at,
+            media_metadata=metadata,
+        )
+        updated_jobs = [updated_job if item.shot_id == shot_id else item for item in queue.jobs]
+        dump_model(queue.model_copy(update={"jobs": updated_jobs}), queue_file, overwrite=True)
+    except (OSError, StorageError, JobTransitionError) as exc:
+        if created_output:
+            destination.unlink(missing_ok=True)
+        _fail(f"Could not import media for {shot_id}: {exc}")
+    typer.echo(f"Imported and verified {source.name} for {shot_id}")
+    typer.echo(f"Output: {destination.relative_to(root).as_posix()}")
+    typer.echo(f"SHA-256: {digest.hexdigest()}")
+    typer.echo("Job status: generated; continuity ledger remains unchanged until the clip is reviewed.")
+
+
 @media_app.command("inspect")
 def media_inspect(
     media_file: Path = typer.Argument(..., exists=True, dir_okay=False),
@@ -629,11 +725,37 @@ def continuity_update(
         _fail("Missing representative frame(s): " + ", ".join(missing))
     ledger_path = episode_file.parent / "continuity-ledger.yaml"
     ledger = _load_ledger(ledger_path, episode.episode_id)
+    queue_path = episode_file.parent / "generation" / "jobs.json"
+    queue = _load_queue(queue_path, episode.episode_id) if queue_path.exists() else None
+    updated_queue = None
+    if queue is not None:
+        jobs = [job for job in queue.jobs if job.shot_id == shot_id]
+        if len(jobs) > 1:
+            _fail(f"Multiple jobs found for {shot_id}; resolve the queue before review")
+        if jobs:
+            job = jobs[0]
+            if job.status == JobStatus.GENERATED:
+                if not job.output_path:
+                    _fail(f"{shot_id} has no recorded media output; import or download it before review")
+                try:
+                    media_path = resolve_inside(root, job.output_path)
+                except StorageError as exc:
+                    _fail(f"Invalid media output path for {shot_id}: {exc}")
+                if not media_path.is_file():
+                    _fail(f"Recorded media output is missing for {shot_id}: {media_path}")
+                reviewed_job = transition_job(job, JobStatus.REVIEWED)
+                updated_queue = queue.model_copy(update={
+                    "jobs": [reviewed_job if item.shot_id == shot_id else item for item in queue.jobs]
+                })
+            elif job.status not in (JobStatus.REVIEWED, JobStatus.QC_PASSED):
+                _fail(f"{shot_id} must have imported/generated media before continuity review; current job status is {job.status}")
     try:
         updated = record_review(ledger, shot_id, state, frame_paths, note, risk)
     except ContinuityError as exc:
         _fail(str(exc))
     dump_model(updated, ledger_path, overwrite=True)
+    if updated_queue is not None:
+        dump_model(updated_queue, queue_path, overwrite=True)
     typer.echo(f"Recorded reviewed media state for {shot_id} in {ledger_path}")
 
 

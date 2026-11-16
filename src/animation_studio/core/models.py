@@ -273,7 +273,7 @@ class GenerationManifest(StrictModel):
 
 class ShotJob(StrictModel):
     job_id: str
-    shot_id: str
+    shot_id: str = Field(pattern=r"^[A-Z0-9_-]+$")
     provider_mode: str
     status: JobStatus = JobStatus.PLANNED
     task_id: str | None = None
@@ -281,12 +281,18 @@ class ShotJob(StrictModel):
     request_parameters: dict[str, object] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: datetime | None = None
     output_path: str | None = None
+    provider_model: str | None = None
+    source_media_name: str | None = None
+    media_sha256: str | None = None
+    media_imported_at: datetime | None = None
+    media_metadata: dict[str, object] | None = None
     error: str | None = None
 
 
 class JobQueue(StrictModel):
-    episode_id: str
+    episode_id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     jobs: list[ShotJob] = Field(default_factory=list)
 
 

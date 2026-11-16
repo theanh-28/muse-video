@@ -24,9 +24,10 @@
 
 - Stages 1–3 are implemented: provider/continuity ADRs, project-local Codex skill, Typer authoring workflow, Pydantic bibles/storyboards, and continuity ledger rules.
 - Stage 4 is implemented for offline/manual use: ManualProvider is the default; Muse2API has a separate experimental adapter with mocked contract tests only. Neither gateway compatibility nor the user's Muse account is live-verified.
+- Manual media import validates video with ffprobe, copies it into the episode's per-shot clips directory without overwriting, and records its relative path, SHA-256, import time and observed metadata. Importing a file does not update the continuity ledger; after review, `continuity update` records the observation and advances the matching generated job to reviewed.
 - Stage 5 is implemented and tested against a synthetic local fixture with installed FFmpeg/ffprobe. No Muse-generated media was used.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.
-- Unit tests: 31 passed. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
+- Unit tests: 33 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
 - No generation request was sent. The demo manifest has no usage estimate or budget and is not approved. Real video remains gated on provider/access verification plus the user's explicit approval of a concrete manifest and usage cap.
 
 ## Delivery stages
@@ -85,6 +86,7 @@ anistudio generation plan
 anistudio generation approve        # explicit budget/usage approval
 anistudio generation submit         # second confirmation; provider-dependent
 anistudio generation status
+anistudio generation import-media  # validate and record manually generated media
 anistudio media inspect
 anistudio continuity update
 anistudio episode render

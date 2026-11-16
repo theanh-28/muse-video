@@ -37,9 +37,12 @@ uv run python -m animation_studio.cli.main generation plan projects/my-show/epis
 Sau khi media được tạo hoặc nhập thủ công:
 
 ```powershell
+uv run python -m animation_studio.cli.main generation import-media projects/my-show/episodes/EP001/generation/jobs.json --shot-id SHOT_001 --media-file path\to\clip.mp4 --provider-model "Muse Video v1"
 uv run python -m animation_studio.cli.main media inspect path\to\clip.mp4 --project-dir projects/my-show --frames-dir episodes/EP001/frames/SHOT_001
 uv run python -m animation_studio.cli.main continuity update projects/my-show/episodes/EP001/episode.yaml --shot-id SHOT_001 --actual-end-state path\to\observed-end-state.yaml --frames-dir episodes/EP001/frames/SHOT_001
 ```
+
+`generation import-media` chỉ nhận job `ManualProvider` đang chờ media. Lệnh kiểm tra clip bằng ffprobe, sao chép nó vào `episodes/EP001/clips/SHOT_001/`, không ghi đè file, rồi lưu output path, hash SHA-256, metadata media, model (nếu cung cấp) và thời điểm nhập vào job queue. Import không tự đánh dấu continuity đã review. Sau khi kiểm tra clip, `continuity update` ghi trạng thái quan sát vào ledger và chuyển job tương ứng từ `generated` sang `reviewed`.
 
 Tạo cut list từ `templates/cut-list.yaml`, rồi render/QC:
 

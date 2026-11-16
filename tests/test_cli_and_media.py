@@ -12,6 +12,7 @@ from animation_studio.core.models import ContinuityLedger, Episode, JobQueue, Jo
 from animation_studio.media.ffmpeg import extract_representative_frames, run_command
 from animation_studio.media.qc import inspect_media, quality_report
 from animation_studio.providers.base import ProviderError, ProviderTask
+from animation_studio.services.manifest import approve_manifest, build_manifest
 from animation_studio.storage.files import dump_model, load_model
 
 runner = CliRunner()
@@ -131,6 +132,44 @@ def test_cli_generation_gate_requires_storyboard_approval_and_manual_submit_is_n
     assert "No video was created" in submit.output
 
 
+def test_partial_manifest_is_rejected_before_any_request_or_status_change(tmp_path, make_shot, monkeypatch):
+    assert runner.invoke(app, ["project", "init", str(tmp_path), "--title", "Partial Gate Test"]).exit_code == 0
+    assert runner.invoke(app, ["episode", "init", "EP001", "--project-dir", str(tmp_path)]).exit_code == 0
+    episode_file = tmp_path / "episodes" / "EP001" / "episode.yaml"
+    first = make_shot()
+    second = make_shot(shot_id="SHOT_002", order=2, continuity="C3", depends_on=["SHOT_001"])
+    episode = load_model(episode_file, Episode).model_copy(update={
+        "status": WorkflowStatus.APPROVED,
+        "shots": [
+            first.model_copy(update={"status": WorkflowStatus.APPROVED}),
+            second.model_copy(update={"status": WorkflowStatus.APPROVED}),
+        ],
+    })
+    dump_model(episode, episode_file, overwrite=True)
+    config = load_model(tmp_path / "project.yaml", ProjectConfig)
+    manifest = approve_manifest(
+        build_manifest(episode, config),
+        usage_estimate="2 requests",
+        budget_limit="2 requests maximum",
+        approved_by="reviewer",
+    )
+    manifest_file = episode_file.parent / "generation" / f"{manifest.manifest_id}.json"
+    dump_model(manifest, manifest_file, overwrite=False)
+
+    def provider_must_not_be_created(*args, **kwargs):
+        raise AssertionError("provider should not be created for a partially eligible manifest")
+
+    monkeypatch.setattr("animation_studio.cli.main._make_provider", provider_must_not_be_created)
+    result = runner.invoke(app, ["generation", "submit", str(manifest_file)], input="y\n")
+
+    assert result.exit_code != 0
+    assert "only partially eligible (1 of 2)" in result.output
+    assert "no request was sent" in result.output
+    saved_manifest = load_model(manifest_file, type(manifest))
+    assert saved_manifest.status == "APPROVED"
+    assert not (episode_file.parent / "generation" / "jobs.json").exists()
+
+
 @pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools are not installed")
 def test_manual_media_import_records_provenance_and_review_updates_job_and_ledger(tmp_path, make_shot, state):
     assert runner.invoke(app, ["project", "init", str(tmp_path), "--title", "Import Test"]).exit_code == 0
@@ -248,6 +287,34 @@ def test_generation_status_downloads_completed_result_and_records_provenance(tmp
     assert saved_job.completed_at is not None
     assert saved_job.media_metadata["duration_seconds"] > 0
     assert saved_job.error is None
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools are not installed")
+def test_generation_status_reuses_valid_task_scoped_file_without_overwrite(tmp_path, monkeypatch):
+    queue_file = _remote_queue(tmp_path)
+    destination = tmp_path / "episodes" / "EP001" / "clips" / "SHOT_001" / "TASK_001.mp4"
+    destination.parent.mkdir(parents=True)
+    run_command([
+        shutil.which("ffmpeg"), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+        "-i", "testsrc=size=96x64:rate=12:duration=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(destination),
+    ])
+
+    class CompletedProvider:
+        def get_task(self, task_id):
+            return ProviderTask(task_id=task_id, status="completed", raw={"model": "mock-video-v1"})
+
+        def download_result(self, task, target):
+            raise AssertionError("existing task result must not be overwritten or downloaded again")
+
+    provider = CompletedProvider()
+    monkeypatch.setattr("animation_studio.cli.main._make_provider", lambda *args, **kwargs: provider)
+    result = runner.invoke(app, ["generation", "status", str(queue_file), "--refresh"])
+
+    assert result.exit_code == 0, result.output
+    saved_job = load_model(queue_file, JobQueue).jobs[0]
+    assert saved_job.status == JobStatus.GENERATED
+    assert saved_job.output_path == destination.relative_to(tmp_path).as_posix()
+    assert destination.is_file()
 
 
 def test_generation_status_persists_download_failure_without_marking_generated(tmp_path, monkeypatch):

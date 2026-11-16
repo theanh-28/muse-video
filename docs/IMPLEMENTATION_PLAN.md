@@ -27,7 +27,7 @@
 - Manual media import validates video with ffprobe, copies it into the episode's per-shot clips directory without overwriting, and records its relative path, SHA-256, import time and observed metadata. Importing a file does not update the continuity ledger; after review, `continuity update` records the observation and advances the matching generated job to reviewed.
 - Stage 5 is implemented and tested against a synthetic local fixture with installed FFmpeg/ffprobe. No Muse-generated media was used.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.
-- Unit tests: 33 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
+- Unit tests: 37 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
 - No generation request was sent. The demo manifest has no usage estimate or budget and is not approved. Real video remains gated on provider/access verification plus the user's explicit approval of a concrete manifest and usage cap.
 
 ## Delivery stages
@@ -57,7 +57,7 @@
 - Ship `ManualProvider` as the default, for prompt handoff and imported media.
 - Implement Muse2API behind a separate experimental adapter using the inspected request/task/download contract. Never include cookies; read only the gateway bearer key from the process environment.
 - Do not enable real submission by default. Planning writes a DRAFT manifest only. Approval requires a usage estimate and budget limit; submission requires the approved manifest hash and a second explicit action-time confirmation. No POST retry is automatic.
-- Keep maximum concurrency at 1. Gate C3 submissions on the preceding shot's reviewed ledger entry and reference plan.
+- Keep maximum concurrency at 1. Gate C3 submissions on the preceding shot's reviewed ledger entry and reference plan. Reject a manifest as a whole before submission if any included shot is not eligible, so the saved status cannot imply a full batch was sent when only a prefix was eligible.
 - **Exit:** queue transition tests pass; mocked adapter tests pass. These do not certify upstream compatibility or account access.
 
 ### Stage 5 — Media inspection, render and QC

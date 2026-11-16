@@ -32,7 +32,7 @@ uv run python -m animation_studio.cli.main prompts build projects/my-show/episod
 uv run python -m animation_studio.cli.main generation plan projects/my-show/episodes/EP001/episode.yaml --shot-id SHOT_001
 ```
 
-`generation plan` chỉ ghi manifest `DRAFT`, không gửi request. Manifest phải có usage estimate và giới hạn ngân sách được duyệt trước khi submit; CLI yêu cầu xác nhận lần nữa tại thời điểm submit. Shot nối tiếp chỉ được prompt/lập kế hoạch sau khi clip trước được kiểm tra và ledger ghi lại end state thực tế cùng first/middle/last frame.
+`generation plan` chỉ ghi manifest `DRAFT`, không gửi request. Manifest phải có usage estimate và giới hạn ngân sách được duyệt trước khi submit; CLI yêu cầu xác nhận lần nữa tại thời điểm submit. Nếu bất kỳ request nào trong manifest chưa qua continuity gate, CLI từ chối toàn bộ manifest trước khi gửi request; hãy lập và duyệt manifest mới sau khi shot tiền nhiệm được review. Shot nối tiếp chỉ được prompt/lập kế hoạch sau khi clip trước được kiểm tra và ledger ghi lại end state thực tế cùng first/middle/last frame.
 
 Sau khi media được tạo hoặc nhập thủ công:
 
@@ -44,7 +44,7 @@ uv run python -m animation_studio.cli.main continuity update projects/my-show/ep
 
 `generation import-media` chỉ nhận job `ManualProvider` đang chờ media. Lệnh kiểm tra clip bằng ffprobe, sao chép nó vào `episodes/EP001/clips/SHOT_001/`, không ghi đè file, rồi lưu output path, hash SHA-256, metadata media, model (nếu cung cấp) và thời điểm nhập vào job queue. Import không tự đánh dấu continuity đã review. Sau khi kiểm tra clip, `continuity update` ghi trạng thái quan sát vào ledger và chuyển job tương ứng từ `generated` sang `reviewed`.
 
-Với Muse2API thử nghiệm đã được bật, `generation status ... --refresh` poll task một lần và tải kết quả đã hoàn tất vào thư mục clips theo shot. CLI kiểm tra file tải về bằng ffprobe trước khi đánh dấu job `generated`; lỗi được lưu trong queue và không gửi lại generation request.
+Với Muse2API thử nghiệm đã được bật, `generation status ... --refresh` poll task một lần và tải kết quả đã hoàn tất vào thư mục clips theo shot. CLI kiểm tra file tải về bằng ffprobe trước khi đánh dấu job `generated`; lỗi được lưu trong queue và không gửi lại generation request. Nếu file theo task ID đã tồn tại từ lần tải trước, CLI kiểm tra lại file đó và không ghi đè.
 
 Tạo cut list từ `templates/cut-list.yaml`, rồi render/QC:
 

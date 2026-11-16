@@ -513,7 +513,10 @@ def generation_submit(manifest_file: Path = typer.Argument(..., exists=True, dir
     if not eligible:
         _fail("No shot is eligible: review the predecessor clip and update the continuity ledger first")
     if len(eligible) < len(manifest.requests):
-        typer.echo(f"Continuity gate: submitting {len(eligible)} of {len(manifest.requests)} approved request(s) this turn.")
+        _fail(
+            f"Approved manifest is only partially eligible ({len(eligible)} of {len(manifest.requests)}); "
+            "no request was sent. Create and approve a manifest only after every included shot is eligible."
+        )
     typer.echo(_summary_text(manifest))
     typer.echo(f"Usage basis: {manifest.usage_estimate}; approved limit: {manifest.budget_limit}")
     if not typer.confirm(f"Submit {len(eligible)} request(s) to {manifest.provider_mode}?", default=False):

@@ -30,7 +30,7 @@
       "job_id": "JOB-MAN-20261117T080433Z-2fcbaaf9-SHOT_001",
       "shot_id": "SHOT_001",
       "provider_mode": "muse2api_experimental",
-      "status": "queued",
+      "status": "running",
       "task_id": "task_32626c256d564b47ae93",
       "prompt": "FORMAT: 6 seconds, C1, aspect ratio 16:9\nSHOT: SHOT_001 single-shot provider diagnostic; preserve the opening scene and do not advance the lantern story.\nVISUAL STYLE: 2D painterly animation with visible gouache texture, cool blue night fog, muted wet wood, soft natural movement.\nSUBJECT AND LOCKS:\n- Mai is an adult young woman with a warm medium-brown complexion, oval face, a small mole below her left eye, and black hair tied low.\n- She wears a dark olive coastal coat, a pale yellow scarf, and dark rubber boots.\n- The location is a narrow wet wooden pier at night. A short wooden post stands near the center; three mooring posts and dark water remain on the right.\n- A small brass storm lantern with slightly fogged glass and a curved handle rests on the post. It stays unlit for this shot.\nACTION OVER TIME:\n1. 0â€“2 seconds: Blue fog drifts across the boards. Mai stands on the left and looks down toward the pier.\n2. 2â€“4 seconds: Mai raises her eyes toward the unlit lantern. Keep the lantern fixed on the post.\n3. 4â€“6 seconds: Mai begins to lean toward the lantern but does not touch it. End before she reaches it.\nCAMERA: Wide establishing view easing into a medium-wide view; eye-level; one very slow, steady dolly-in; Mai stays left, lantern near center, water right.\nLIGHTING: Cool blue night light only. The unlit lantern emits no light.\nAUDIO: Soft sea wind, gentle water below the pier, one brief wooden creak; no dialogue.\nNEGATIVE CONSTRAINTS: No additional people, boats, matches, tools, other light sources, costume changes, hand contact with the lantern, cuts, camera shake, or text overlays.\nQA TARGETS: Mai remains left of the unlit brass lantern; the lantern stays on the post; the shot ends before contact; no other subject appears.",
       "request_parameters": {
@@ -41,7 +41,7 @@
         "depends_on": []
       },
       "created_at": "2026-11-17T08:05:40.387581Z",
-      "updated_at": "2026-11-17T08:05:40.658157Z",
+      "updated_at": "2026-11-17T08:06:03.611476Z",
       "completed_at": null,
       "output_path": null,
       "provider_model": null,

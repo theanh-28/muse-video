@@ -1,0 +1,17 @@
+FORMAT: 6 seconds, C1, aspect ratio 16:9
+SHOT: SHOT_001 single-shot provider diagnostic; preserve the opening scene and do not advance the lantern story.
+VISUAL STYLE: 2D painterly animation with visible gouache texture, cool blue night fog, muted wet wood, soft natural movement.
+SUBJECT AND LOCKS:
+- Mai is an adult young woman with a warm medium-brown complexion, oval face, a small mole below her left eye, and black hair tied low.
+- She wears a dark olive coastal coat, a pale yellow scarf, and dark rubber boots.
+- The location is a narrow wet wooden pier at night. A short wooden post stands near the center; three mooring posts and dark water remain on the right.
+- A small brass storm lantern with slightly fogged glass and a curved handle rests on the post. It stays unlit for this shot.
+ACTION OVER TIME:
+1. 0–2 seconds: Blue fog drifts across the boards. Mai stands on the left and looks down toward the pier.
+2. 2–4 seconds: Mai raises her eyes toward the unlit lantern. Keep the lantern fixed on the post.
+3. 4–6 seconds: Mai begins to lean toward the lantern but does not touch it. End before she reaches it.
+CAMERA: Wide establishing view easing into a medium-wide view; eye-level; one very slow, steady dolly-in; Mai stays left, lantern near center, water right.
+LIGHTING: Cool blue night light only. The unlit lantern emits no light.
+AUDIO: Soft sea wind, gentle water below the pier, one brief wooden creak; no dialogue.
+NEGATIVE CONSTRAINTS: No additional people, boats, matches, tools, other light sources, costume changes, hand contact with the lantern, cuts, camera shake, or text overlays.
+QA TARGETS: Mai remains left of the unlit brass lantern; the lantern stays on the post; the shot ends before contact; no other subject appears.

@@ -19,5 +19,6 @@ profiles/
 # Generated project media can be large/private; keep unless intentionally versioned.
 projects/*/clips/
 projects/*/episodes/*/clips/
+projects/*/episodes/*/frames/
 projects/*/references/private/
 projects/*/final/

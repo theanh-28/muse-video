@@ -1,0 +1,51 @@
+{
+  "file": "D:\\muse-animation-studio-starter\\projects\\demo\\episodes\\EP001\\clips\\SHOT_001\\task_32626c256d564b47ae93.mp4",
+  "status": "WARN",
+  "checks": {
+    "has_video_stream": true,
+    "positive_duration": true,
+    "expected_width": false,
+    "expected_height": false,
+    "expected_fps": false,
+    "decode_errors": true
+  },
+  "media": {
+    "path": "D:\\muse-animation-studio-starter\\projects\\demo\\episodes\\EP001\\clips\\SHOT_001\\task_32626c256d564b47ae93.mp4",
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "duration_seconds": 6.0,
+    "size_bytes": 3005406,
+    "width": 1280,
+    "height": 720,
+    "fps": 24.0,
+    "video_codec": "h264",
+    "audio_streams": 1,
+    "streams": [
+      {
+        "index": 0,
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1280,
+        "height": 720,
+        "r_frame_rate": "24/1",
+        "avg_frame_rate": "24/1",
+        "duration": "6.000000"
+      },
+      {
+        "index": 1,
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "r_frame_rate": "0/0",
+        "avg_frame_rate": "0/0",
+        "duration": "6.000000"
+      }
+    ]
+  },
+  "black_segments": [],
+  "black_detection_threshold": {
+    "minimum_seconds": 0.1,
+    "pixel_threshold": 0.1
+  },
+  "notes": [
+    "Black detection is a basic signal; review the frames and full clip visually."
+  ]
+}

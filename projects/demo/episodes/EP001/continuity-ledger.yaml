@@ -1,8 +1,57 @@
 episode_id: EP001
-updated_at: null
+updated_at: '2026-11-17T08:15:02.600873Z'
 source_of_truth: observed_media_over_storyboard_when_they_conflict
-last_completed_shot_id: null
-observations: []
+last_completed_shot_id: SHOT_001
+observations:
+- shot_id: SHOT_001
+  status: reviewed
+  actual_end_state:
+    screen_position: Mai occupies the left/near-center foreground and leans toward
+      the lantern; the lantern remains on its post near the center/right of frame.
+    body_orientation: Mai is turned roughly three-quarters toward the lantern on the
+      right.
+    eyeline: Mai's attention is directed toward the lantern.
+    pose_or_motion: Mai leans forward toward the lantern but does not touch it.
+    left_hand: Not clearly visible in the sampled final frame.
+    right_hand: Not clearly visible in the sampled final frame.
+    held_props: []
+    costume_condition: Dark olive-toned coat and pale scarf are visible; fine costume
+      details are not fully verifiable from the sampled frames.
+    injuries_or_marks: The small mole and other fine facial identity details are not
+      reliably verifiable in these sampled frames.
+    environment: Nighttime wooden pier with dark water and dense cool blue fog.
+    prop_positions:
+    - Small brass storm lantern remains on the wooden post near the center/right of
+      frame.
+    - Lantern remains unlit.
+    lighting: Cool blue night lighting; the lantern emits no visible warm light.
+    camera_state: The camera pushes in substantially and ends in a tight medium-close/close
+      view, tighter than the planned wide-to-medium-wide framing.
+    story_state: Mai has noticed and leans toward the unlit lantern; no contact or
+      pickup is visible.
+  extracted_frames:
+    first: D:\muse-animation-studio-starter\projects\demo\episodes\EP001\frames\SHOT_001\first.png
+    last: D:\muse-animation-studio-starter\projects\demo\episodes\EP001\frames\SHOT_001\last.png
+    middle: D:\muse-animation-studio-starter\projects\demo\episodes\EP001\frames\SHOT_001\middle.png
+  continuity_risks:
+  - End framing is much tighter than the planned wide-to-medium-wide move; reblock
+    the next dependent shot from this observed close framing and last frame.
+  - The source is 1280x720 at 24 fps while the project master target is 1920x1080
+    at 30 fps; any conform is an upscale/frame-rate conversion and does not add source
+    detail.
+  - The diagnostic clip is six seconds rather than the approved storyboard's ten seconds
+    and is not a finished story shot.
+  - Fine facial identity details, including the small mole, are not verifiable from
+    the sampled frames.
+  reviewer_notes:
+  - Reviewed first, middle, and last extracted frames; FFmpeg decoded the full six-second
+    file without error.
+  - This was a six-second diagnostic prompt, not the approved ten-second story shot;
+    it is proof of provider generation only and should not be treated as the final
+    episode opening.
+  - The exact request record preserves a mojibake en dash in the 0-2 second beat from
+    the PowerShell prompt-file read; keep it unchanged as the sent-request record
+    and use UTF-8 reads for future prompts.
 next_shot_handoff:
   required_reference_images: []
   required_locks: []

@@ -1,0 +1,18 @@
+screen_position: >-
+  Mai occupies the left/near-center foreground and leans toward the lantern; the
+  lantern remains on its post near the center/right of frame.
+body_orientation: Mai is turned roughly three-quarters toward the lantern on the right.
+eyeline: Mai's attention is directed toward the lantern.
+pose_or_motion: Mai leans forward toward the lantern but does not touch it.
+left_hand: Not clearly visible in the sampled final frame.
+right_hand: Not clearly visible in the sampled final frame.
+held_props: []
+costume_condition: Dark olive-toned coat and pale scarf are visible; fine costume details are not fully verifiable from the sampled frames.
+injuries_or_marks: The small mole and other fine facial identity details are not reliably verifiable in these sampled frames.
+environment: Nighttime wooden pier with dark water and dense cool blue fog.
+prop_positions:
+  - Small brass storm lantern remains on the wooden post near the center/right of frame.
+  - Lantern remains unlit.
+lighting: Cool blue night lighting; the lantern emits no visible warm light.
+camera_state: The camera pushes in substantially and ends in a tight medium-close/close view, tighter than the planned wide-to-medium-wide framing.
+story_state: Mai has noticed and leans toward the unlit lantern; no contact or pickup is visible.

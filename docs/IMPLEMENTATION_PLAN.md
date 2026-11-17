@@ -1,6 +1,6 @@
 # Implementation Plan — Muse Animation Studio MVP
 
-**Status:** local MVP implemented; real generation remains gated  
+**Status:** local MVP implemented; one real Muse smoke generation verified, production remains gated  
 **Audit date:** 2026-11-16  
 **Implementation checkpoint:** 2026-11-17
 
@@ -8,7 +8,7 @@
 
 - The project-local data files remain the creative and production source of truth.
 - Manual Muse work is the default provider mode. The local CLI prepares prompts, manifests, task records and media handoff; it does not pretend to automate a Muse session.
-- Muse2API is experimental. Its upstream code has been inspected, but the user account and a real generation request have not been verified. No generation call is permitted until a concrete manifest and usage budget are approved. The provider must remain opt-in and must stop rather than retry a failed submission.
+- Muse2API is experimental. One explicitly approved six-second diagnostic request completed on the current account/session. This verifies a single request only; quota usage, batch reliability, reference support and continuation remain unverified. Each request still needs a concrete manifest and approved cap. The provider remains opt-in and must stop rather than automatically retry a failed submission.
 - No official Meta video-generation API was found in the official Model API material reviewed on 2026-11-16. The reviewed pages describe image generation and video understanding. Recheck before any future official-provider integration.
 - Continuity observations describe reviewed media, not planned outcomes. C3 shots depend on the previous shot and cannot advance until the previous result has been inspected.
 
@@ -23,13 +23,15 @@
 ## Implementation checkpoint — 2026-11-17
 
 - Stages 1–3 are implemented: provider/continuity ADRs, project-local Codex skill, Typer authoring workflow, Pydantic bibles/storyboards, and continuity ledger rules.
-- Stage 4 is implemented for offline/manual use: ManualProvider is the default; Muse2API has a separate experimental adapter with mocked contract tests only. A status refresh downloads completed results into the project and validates them with ffprobe before marking a job generated. Neither gateway compatibility nor the user's Muse account is live-verified.
+- Stage 4 is implemented for offline/manual use with a separate experimental Muse2API adapter. Mocked contract tests remain useful, and one real six-second request now verifies live submit, task polling, download and ffprobe validation for the current session. This does not verify sustained access, quota accounting, batch reliability, references or continuation. The default provider stays ManualProvider.
 - Manual media import validates video with ffprobe, copies it into the episode's per-shot clips directory without overwriting, and records its relative path, SHA-256, import time and observed metadata. Importing a file does not update the continuity ledger; after review, `continuity update` records the observation and advances the matching generated job to reviewed.
-- Stage 5 is implemented and tested against a synthetic local fixture with installed FFmpeg/ffprobe. No Muse-generated media was used.
+- Stage 5 is implemented and tested against a synthetic fixture. The successful Muse clip was also inspected with ffprobe, decoded fully with FFmpeg, and conformed to the configured 1920x1080/30 fps export profile. The conformed clip's QC report passed; the original provider output was 1280x720/24 fps and received QC WARN against the configured master profile.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.
 - Unit tests: 37 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
-- Live smoke-test attempt on 2026-11-17: the authenticated gateway listed `muse-video`; one user-approved 10-second `SHOT_001` request was accepted as queued, then failed with the gateway's generic `账号额度不足` classification. A fresh probe of that same account showed Free-plan weekly usage at 8%, 2B additional tokens remaining, and 0% extra-token usage. The pinned gateway maps several page-tail phrases to the generic quota error and does not persist the matching source text, so the actual Muse-side cause is unresolved. No output clip was downloaded or validated, and no retry was sent.
-- Successful video generation remains unverified. The failed task and approved manifest are recorded under `projects/demo/episodes/EP001/generation/`. Do not retry that task; any new attempt needs better error capture, a fresh manifest, and approved usage/budget.
+- First live smoke attempt: the user-approved 10-second task `task_dc27ab1f21e14211a8e5` failed with the gateway's generic `账号额度不足` classification. The quota probe showed Free-plan weekly usage at 8%, 2B additional tokens remaining and 0% extra-token usage, so it did not support a general account-wide quota exhaustion diagnosis. The exact Muse-side cause remains unresolved.
+- Gateway error reporting was improved in the local runtime commit `380bc8f` to avoid broad token-limit matches and preserve a sanitized source excerpt for future errors.
+- Second live smoke attempt: the separately approved six-second diagnostic task `task_32626c256d564b47ae93` completed and downloaded a real H.264/AAC MP4. Source metadata: 1280x720, 24 fps, six seconds; FFmpeg decoded it without errors. A conformed 1920x1080/30 fps copy passed project QC. This proves the current account/session can generate at least one video, not that the 10-second request or future batches will work.
+- The successful smoke prompt was intentionally diagnostic and does not complete the approved ten-second story shot. Its exact request record is preserved; the time-range dash in the sent prompt was mojibaked by a PowerShell ANSI read. Future prompt reads must specify UTF-8. The continuity ledger records the observed final state, framing deviation, diagnostic limits and unresolved identity details. The quota meter was not refreshed after the successful request, so its usage is unknown.
 
 ## Delivery stages
 
@@ -100,5 +102,5 @@ anistudio episode qc
 
 - Run the project's unit test suite and the skill structure validator after implementation.
 - Use mocked HTTP responses for Muse2API adapter tests. Do not call a real generation endpoint during implementation.
-- A real provider smoke test remains a separate, user-approved generation with its own exact prompt, duration, reference files and usage cap. Until then, capability claims remain unverified.
+- The real-provider smoke test has been performed once with an approved one-shot prompt and cap. Future requests require their own approval, exact prompt, duration, reference plan and usage cap; do not generalize this single success into batch or quota guarantees.
 - Browser access to the user's Muse account, referral-token applicability, actual output duration/aspect ratio, reference adherence and continuity quality remain unknown.

@@ -88,8 +88,9 @@ uv run python -m animation_studio.cli.main episode qc projects/my-show/final/epi
 
 ## Skills và provider
 
-- Skill dự án: `.agents/skills/anistudio-story-continuity/` — quy tắc viết, prompt và cập nhật continuity theo dữ liệu trên đĩa.
-- Không cài các Skills bên thứ ba đã audit vì phạm vi trùng lặp rộng; xem `docs/THIRD_PARTY_SKILLS.md`.
+- Skill router: `.agents/skills/anistudio-story-continuity/` — source of truth, continuity và cổng duyệt.
+- Ba skill chuyên biệt: `anistudio-drama-workbench` (story/bible/storyboard), `anistudio-muse-prompting` (prompt một shot theo capability hiện có), `anistudio-cinematic-qa` (camera/ánh sáng và QA dựa trên evidence).
+- Đây là các bản viết lại project-local, ánh xạ chọn lọc từ ba nguồn MIT đã pin; không cài nguyên gói, script hay API/browser workflow của bên thứ ba. Xem bảng ánh xạ và giới hạn tại `docs/THIRD_PARTY_SKILLS.md`.
 - Quyết định provider và continuity: `docs/ADR/0001-provider-integration.md`, `docs/ADR/0002-continuity-strategy.md`.
 - Trạng thái kiểm chứng, rủi ro và giới hạn: `docs/IMPLEMENTATION_PLAN.md`, `docs/RESEARCH_NOTES.md`.
 - Không lưu cookie, session hoặc API key trong repo. Muse2API chỉ đọc bearer key từ biến môi trường khi người dùng tự cấu hình provider.
@@ -97,6 +98,7 @@ uv run python -m animation_studio.cli.main episode qc projects/my-show/final/epi
 ## Kiểm tra
 
 ```powershell
+uv run python scripts/validate_skills.py
 uv run pytest -q
 ```
 

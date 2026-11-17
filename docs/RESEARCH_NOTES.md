@@ -67,4 +67,4 @@ Tra cứu tài liệu Meta Model API ngày 2026-11-16: tài liệu chính thức
 
 ### Third-party skills
 
-Audit commit/license/status: xem `THIRD_PARTY_SKILLS.md`. Không cài/copy/chạy scripts. Chọn tạo một skill gọn riêng cho repo để tránh xung đột workflow và schema. Muse Video account access trên phiên trình duyệt của người dùng vẫn chưa verify; audit mã/static không thay cho test tài khoản.
+Audit commit/license/status và bản mở rộng local: xem `THIRD_PARTY_SKILLS.md`. Ba nguồn được tham khảo tại commit đã pin và ánh xạ có chọn lọc vào skills project-local; upstream packages/scripts không được cài hoặc chạy. Muse Video account access, capabilities và kết quả generation phải tiếp tục được xác minh riêng; skill audit không thay thế probe tài khoản.

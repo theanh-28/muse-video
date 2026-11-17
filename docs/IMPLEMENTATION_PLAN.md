@@ -17,7 +17,7 @@
 
 - Windows, Python 3.13.14, uv 0.13.7, Node 26.3.1, FFmpeg/ffprobe 9.0.2; approximately 38.7 GB free on D: at implementation start.
 - Muse browser account access remains unverified. The current Windows browser surface was unavailable to the Computer Use integration in the audit turn.
-- No third-party skill was installed. A project-local `anistudio-story-continuity` skill is being authored. Upstream repository audit notes and commit IDs are in `THIRD_PARTY_SKILLS.md` and `RESEARCH_NOTES.md`.
+- Upstream skill packages remain uninstalled. The original router plus three focused local adaptations (`anistudio-drama-workbench`, `anistudio-muse-prompting`, `anistudio-cinematic-qa`) are tracked in `.agents/skills/`; their source mappings, pinned commits and limitations are in `THIRD_PARTY_SKILLS.md`.
 - Upstream Muse2API source inspected at commit `19db32a3d6ef50dc87567a8ee0e35dd50c8f7837` (app reports version 1.6.11). `POST /v1/videos` creates an asynchronous task, `GET /v1/videos/{task_id}` returns task state, and generated media is served from `/v1/media/{name}`. The Pydantic request accepts a duration integer without an enforced min/max; its prompt builder defaults to 6 seconds. Aspect ratio and resolution are prompt inputs, not verified output guarantees. Image, video, audio and file references are accepted by the current code, with 10-reference, 40 MiB per item, 100 MiB total limits; supported reference video requires parseable duration metadata and is limited to 120 seconds. There is no native continuation/snapshot ID in the request model. These are static source findings, not live account capabilities.
 - Muse2API stores account cookies in `data/accounts.json` as JSON. Treat its data directory and API key as credentials; bind only to loopback and never copy session data into this project.
 
@@ -47,7 +47,7 @@
 
 ### Stage 2 — Codex workflow and project/episode authoring
 
-- Add one small project-local skill for script, bible, storyboard, prompt and ledger work.
+- Maintain focused project-local skills for story/bible/storyboard, provider-aware one-shot prompts, cinematography and evidence-backed QA; keep them mapped to the existing project models and approval gates.
 - Build a Typer CLI for project and episode initialization, storyboard validation and prompt packaging.
 - Keep templates editable and outputs inside the selected project. Do not overwrite source assets.
 - **Exit:** project/episode files initialize deterministically; invalid storyboards report actionable field paths.

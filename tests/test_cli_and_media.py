@@ -92,6 +92,57 @@ def test_continuity_update_resolves_project_relative_frames_from_project_root(tm
     }
 
 
+def test_continuity_update_ignores_prior_failed_job_when_retry_generated_media(tmp_path, make_shot, state):
+    assert runner.invoke(app, ["project", "init", str(tmp_path)]).exit_code == 0
+    assert runner.invoke(app, ["episode", "init", "EP001", "--project-dir", str(tmp_path)]).exit_code == 0
+
+    episode_file = tmp_path / "episodes" / "EP001" / "episode.yaml"
+    episode = load_model(episode_file, Episode).model_copy(update={"shots": [make_shot()]})
+    dump_model(episode, episode_file, overwrite=True)
+    media_path = episode_file.parent / "clips" / "SHOT_001" / "retry.mp4"
+    media_path.parent.mkdir(parents=True)
+    media_path.write_bytes(b"generated video")
+    queue_file = episode_file.parent / "generation" / "jobs.json"
+    dump_model(JobQueue(episode_id="EP001", jobs=[
+        ShotJob(
+            job_id="JOB-FAILED-ATTEMPT",
+            shot_id="SHOT_001",
+            provider_mode="muse2api_experimental",
+            status=JobStatus.FAILED,
+            prompt="Previous prompt",
+            error="provider rejected the attempt",
+        ),
+        ShotJob(
+            job_id="JOB-SUCCESSFUL-RETRY",
+            shot_id="SHOT_001",
+            provider_mode="muse2api_experimental",
+            status=JobStatus.GENERATED,
+            task_id="TASK_RETRY",
+            prompt="Retry prompt",
+            output_path=media_path.relative_to(tmp_path).as_posix(),
+        ),
+    ]), queue_file, overwrite=False)
+    frames_dir = tmp_path / "review_frames"
+    frames_dir.mkdir()
+    for frame_name in ("first", "middle", "last"):
+        (frames_dir / f"{frame_name}.png").write_bytes(b"test-frame")
+    state_file = tmp_path / "observed-end-state.json"
+    dump_model(state, state_file, overwrite=False)
+
+    result = runner.invoke(app, [
+        "continuity", "update", str(episode_file),
+        "--shot-id", "SHOT_001",
+        "--actual-end-state", str(state_file),
+        "--frames-dir", "review_frames",
+    ])
+
+    assert result.exit_code == 0, result.output
+    saved_queue = load_model(queue_file, JobQueue)
+    assert [job.status for job in saved_queue.jobs] == [JobStatus.FAILED, JobStatus.REVIEWED]
+    ledger = load_model(episode_file.parent / "continuity-ledger.yaml", ContinuityLedger)
+    assert ledger.observations[0].actual_end_state == state
+
+
 def test_cli_generation_gate_requires_storyboard_approval_and_manual_submit_is_non_generating(tmp_path, make_shot):
     assert runner.invoke(app, ["project", "init", str(tmp_path), "--title", "Gate Test"]).exit_code == 0
     assert runner.invoke(app, ["episode", "init", "EP001", "--project-dir", str(tmp_path)]).exit_code == 0

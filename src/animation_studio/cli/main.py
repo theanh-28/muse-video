@@ -799,10 +799,14 @@ def continuity_update(
     updated_queue = None
     if queue is not None:
         jobs = [job for job in queue.jobs if job.shot_id == shot_id]
-        if len(jobs) > 1:
-            _fail(f"Multiple jobs found for {shot_id}; resolve the queue before review")
-        if jobs:
-            job = jobs[0]
+        reviewable_jobs = [
+            job for job in jobs
+            if job.status in (JobStatus.GENERATED, JobStatus.REVIEWED, JobStatus.QC_PASSED)
+        ]
+        if len(reviewable_jobs) > 1:
+            _fail(f"Multiple completed jobs found for {shot_id}; resolve the queue before review")
+        if reviewable_jobs:
+            job = reviewable_jobs[0]
             if job.status == JobStatus.GENERATED:
                 if not job.output_path:
                     _fail(f"{shot_id} has no recorded media output; import or download it before review")
@@ -814,10 +818,11 @@ def continuity_update(
                     _fail(f"Recorded media output is missing for {shot_id}: {media_path}")
                 reviewed_job = transition_job(job, JobStatus.REVIEWED)
                 updated_queue = queue.model_copy(update={
-                    "jobs": [reviewed_job if item.shot_id == shot_id else item for item in queue.jobs]
+                    "jobs": [reviewed_job if item.job_id == job.job_id else item for item in queue.jobs]
                 })
-            elif job.status not in (JobStatus.REVIEWED, JobStatus.QC_PASSED):
-                _fail(f"{shot_id} must have imported/generated media before continuity review; current job status is {job.status}")
+        elif jobs:
+            statuses = ", ".join(job.status for job in jobs)
+            _fail(f"{shot_id} must have imported/generated media before continuity review; current job statuses are {statuses}")
     try:
         updated = record_review(ledger, shot_id, state, frame_paths, note, risk)
     except ContinuityError as exc:

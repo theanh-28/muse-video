@@ -7,6 +7,16 @@ description: "Draft and maintain this project's episode scripts, character/world
 
 Use the project files as the source of truth. Before planning production, read `docs/RESEARCH_NOTES.md`, `docs/CONTINUITY_SPEC.md`, the project configuration and the current episode files. The project CLI and schemas define the accepted structure.
 
+## Skill routing
+
+Use this skill as the project-wide safety and continuity router. For focused work, also consult the smallest relevant specialized skill:
+
+- Story structure, bibles, shot coverage, blocking, or storyboard revision: `.agents/skills/anistudio-drama-workbench/SKILL.md`.
+- Provider-facing prompt composition, reference mapping, or a one-shot manifest: `.agents/skills/anistudio-muse-prompting/SKILL.md`.
+- Camera/light planning or written evidence-based review of generated clips and joins: `.agents/skills/anistudio-cinematic-qa/SKILL.md`.
+
+The local Codex web workflow receives this router as part of its explicit project context. Keep the following shared rules here so its isolated structured calls also apply the specialized practices: make shot purpose and visible action specific; choose a motivated camera and consistent light; build a prompt from approved shot data and currently evidenced provider capabilities; review media with frame/time/report evidence and separate observation from inference. These skills do not override the project's approval, generation, or continuity gates.
+
 ## Authoring workflow
 
 - Keep script, Character Bible, World/Location Bible, Prop Bible, storyboard, prompt package and Continuity Ledger in the selected project/episode directories.

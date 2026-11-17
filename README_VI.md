@@ -2,7 +2,7 @@
 
 Pipeline Python cho Codex quản lý kịch bản, Character Bible, storyboard, prompt và continuity; Muse/provider chỉ tạo media khi được bật và duyệt; FFmpeg/ffprobe kiểm tra, ghép và xuất video.
 
-MVP hiện dùng `ManualProvider` mặc định. Adapter Muse2API là thử nghiệm, bị khóa gửi mặc định; quyền truy cập tài khoản Muse và tương thích gateway chưa được xác minh. Không có video nào được tạo trong lần triển khai này.
+Template dự án mặc định dùng `ManualProvider`; demo hiện tại dùng adapter Muse2API thử nghiệm. Một request chẩn đoán 6 giây đã tạo được video thật trên tài khoản hiện tại. Điều này chỉ xác minh một request, không bảo đảm quota hoặc batch production. Giao diện web local mới dùng Codex CLI để lập DRAFT, rồi yêu cầu duyệt storyboard, usage/budget và xác nhận riêng trước mỗi request video.
 
 ## Cài đặt
 
@@ -14,6 +14,39 @@ uv run python -m animation_studio.cli.main --help
 ```
 
 Trên máy hiện tại, gọi CLI qua `python -m animation_studio.cli.main` vì Windows Application Control chặn launcher `anistudio.exe`.
+
+## Dùng giao diện web
+
+Giao diện chạy riêng trên máy này tại `http://127.0.0.1:8765`; chưa cần trình duyệt cloud hoặc tài khoản web riêng. Cần Codex CLI đã cài và đăng nhập, Docker/Muse2API, cùng FFmpeg/ffprobe.
+
+1. Terminal PowerShell thứ nhất khởi động gateway:
+
+   ```powershell
+   Set-Location D:\muse2api-runtime
+   docker compose up -d --build
+   ```
+
+2. Terminal PowerShell thứ hai tại repo cài web extra, nạp bearer key vào đúng process và mở app:
+
+   ```powershell
+   Set-Location D:\muse-animation-studio-starter
+   uv sync --extra web
+
+   $keyLine = Get-Content -Encoding utf8 'D:\muse2api-runtime\.env' |
+     Where-Object { $_.StartsWith('MUSE2API_KEY=') }
+   if (-not $keyLine) { throw 'Không tìm thấy MUSE2API_KEY trong .env' }
+   $env:MUSE2API_API_KEY = $keyLine.Substring('MUSE2API_KEY='.Length)
+
+   uv run python -m animation_studio.cli.main web --open-browser
+   ```
+
+3. Nhập brief và cài đặt tập trong form. Codex tạo Bible và storyboard **DRAFT** để bạn xem chi tiết; bước này không gọi Muse. Duyệt storyboard trong giao diện để lưu project, chuyển status và tạo prompt shot đầu.
+4. Chọn một shot, tạo manifest rồi kiểm tra prompt, provider, duration, aspect ratio và references. Nhập cơ sở usage cùng giới hạn tối đa; duyệt budget. Để gửi video, nhập đúng cụm `SEND <manifest-id>` và bấm nút xác nhận. Mỗi lần chỉ gửi một request.
+5. Giao diện tự poll task tối đa 30 phút, tải media, trích frame, kiểm tra bằng ffprobe/FFmpeg, conform theo profile project và chạy QC. Lỗi dừng quy trình; không có retry generation tự động.
+6. Bấm **Gửi 3 frame cho Codex review** nếu muốn Codex phân tích continuity. Ba frame tĩnh sẽ được gửi qua Codex CLI; xem lại đề xuất và xác nhận trước khi ledger thay đổi. Khi chấp nhận, app ghi actual end state và tạo prompt shot kế tiếp từ last frame thực tế.
+7. Sau khi mọi shot đều được review và QC_PASSED, dùng **Render và QC episode** để xuất MP4.
+
+Run và brief lưu tại `data/studio/runs/`; project mới lưu tại `projects/studio/`. Server chỉ bind `127.0.0.1`. Codex CLI dùng đăng nhập Codex hiện có; khóa Muse không được đưa vào tiến trình Codex. Xem [Hướng dẫn giao diện web](docs/USER_GUIDE_WEB.md) để hiểu các trạng thái và xử lý lỗi.
 
 ## Tạo dự án và tập
 
@@ -68,3 +101,5 @@ uv run pytest -q
 ```
 
 Các test adapter dùng HTTP mock; chúng không chứng minh gateway hoặc tài khoản Muse hoạt động. Test media dùng fixture cục bộ tổng hợp, không phải video do Muse tạo.
+
+Trạng thái triển khai, video smoke test thật và giới hạn provider: [docs/MUSE2API_DEPLOYMENT.md](docs/MUSE2API_DEPLOYMENT.md). Kiến trúc web và quy trình Codex: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

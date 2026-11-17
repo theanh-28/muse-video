@@ -1,5 +1,11 @@
 # Quy trình sản xuất một tập
 
+## Dùng giao diện local
+
+Có thể nhập brief trong web app và để Codex CLI tạo Bible/storyboard DRAFT. App tự kiểm tra schema, lưu project riêng, tạo prompt đầu tiên sau khi storyboard được duyệt, rồi chuẩn bị one-shot manifest. Tại mỗi request Muse vẫn cần review prompt/usage/budget và xác nhận gửi riêng; sau khi clip hoàn tất, app tự poll, tải, inspect, conform, trích frame và QC.
+
+Continuity review gửi ba frame mẫu qua Codex chỉ khi người dùng bấm nút. Ledger chỉ được ghi sau khi người dùng xem và chấp nhận assessment. Sau đó app mới tạo prompt cho shot kế tiếp từ actual end state và last frame. Episode chỉ export khi mọi shot cần thiết đã review và QC_PASSED. Hướng dẫn chạy: [USER_GUIDE_WEB.md](USER_GUIDE_WEB.md).
+
 ## Phase A — Development
 1. Nhận brief, thể loại, đối tượng khán giả, độ dài và format.
 2. Viết logline, premise, synopsis và beat sheet.

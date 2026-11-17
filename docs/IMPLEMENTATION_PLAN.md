@@ -1,16 +1,17 @@
 # Implementation Plan — Muse Animation Studio MVP
 
-**Status:** local MVP implemented; one real Muse smoke generation verified, production remains gated  
+**Status:** CLI MVP and local Codex web workflow implemented; new web generation path remains unverified end-to-end
 **Audit date:** 2026-11-16  
 **Implementation checkpoint:** 2026-11-17
 
 ## Decisions carried forward
 
 - The project-local data files remain the creative and production source of truth.
-- Manual Muse work is the default provider mode. The local CLI prepares prompts, manifests, task records and media handoff; it does not pretend to automate a Muse session.
+- New project templates keep ManualProvider as the default. The web UI can select the experimentally verified Muse2API path; it automates preparation, polling and media QC but keeps creative, usage and request-send approval gates.
 - Muse2API is experimental. One explicitly approved six-second diagnostic request completed on the current account/session. This verifies a single request only; quota usage, batch reliability, reference support and continuation remain unverified. Each request still needs a concrete manifest and approved cap. The provider remains opt-in and must stop rather than automatically retry a failed submission.
 - No official Meta video-generation API was found in the official Model API material reviewed on 2026-11-16. The reviewed pages describe image generation and video understanding. Recheck before any future official-provider integration.
 - Continuity observations describe reviewed media, not planned outcomes. C3 shots depend on the previous shot and cannot advance until the previous result has been inspected.
+- Codex CLI integration runs ephemerally with a read-only sandbox and strict response schema. The browser app and gateway bind to loopback; Codex receives the brief and selected project rules, plus frames only when the user explicitly starts continuity review.
 
 ## Audit snapshot
 
@@ -27,11 +28,14 @@
 - Manual media import validates video with ffprobe, copies it into the episode's per-shot clips directory without overwriting, and records its relative path, SHA-256, import time and observed metadata. Importing a file does not update the continuity ledger; after review, `continuity update` records the observation and advances the matching generated job to reviewed.
 - Stage 5 is implemented and tested against a synthetic fixture. The successful Muse clip was also inspected with ffprobe, decoded fully with FFmpeg, and conformed to the configured 1920x1080/30 fps export profile. The conformed clip's QC report passed; the original provider output was 1280x720/24 fps and received QC WARN against the configured master profile.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.
-- Unit tests: 37 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
+- CLI unit tests: 38 passed at the last pre-web checkpoint using the project virtual environment. They do not cover the newly added web UI or verify live provider access.
 - First live smoke attempt: the user-approved 10-second task `task_dc27ab1f21e14211a8e5` failed with the gateway's generic `账号额度不足` classification. The quota probe showed Free-plan weekly usage at 8%, 2B additional tokens remaining and 0% extra-token usage, so it did not support a general account-wide quota exhaustion diagnosis. The exact Muse-side cause remains unresolved.
 - Gateway error reporting was improved in the local runtime commit `380bc8f` to avoid broad token-limit matches and preserve a sanitized source excerpt for future errors.
 - Second live smoke attempt: the separately approved six-second diagnostic task `task_32626c256d564b47ae93` completed and downloaded a real H.264/AAC MP4. Source metadata: 1280x720, 24 fps, six seconds; FFmpeg decoded it without errors. A conformed 1920x1080/30 fps copy passed project QC. This proves the current account/session can generate at least one video, not that the 10-second request or future batches will work.
 - The successful smoke prompt was intentionally diagnostic and does not complete the approved ten-second story shot. Its exact request record is preserved; the time-range dash in the sent prompt was mojibaked by a PowerShell ANSI read. Future prompt reads must specify UTF-8. The continuity ledger records the observed final state, framing deviation, diagnostic limits and unresolved identity details. The quota meter was not refreshed after the successful request, so its usage is unknown.
+- A local FastAPI/Uvicorn web workflow was added under `src/animation_studio/studio/`: Codex structured planning, DRAFT project creation, creative approval, one-shot manifest/budget gates, exact send confirmation, bounded task polling, download/ffprobe, frame extraction, FFmpeg conform/QC, opt-in Codex frame review, user-confirmed ledger update, sequential prompt preparation and final episode render.
+- The Codex bridge was exercised with a small structured response and a full five-shot synthetic brief. The complete package passed the domain validator without writing a project or contacting Muse. Web route creation/import succeeded. The new UI has not yet sent a live Muse request; the earlier successful CLI smoke remains the only live generation proof.
+- Install the optional web feature with `uv sync --extra web`, then run `uv run python -m animation_studio.cli.main web --open-browser`. User steps and approval boundaries are in `docs/USER_GUIDE_WEB.md`.
 
 ## Delivery stages
 
@@ -78,6 +82,14 @@
 - Produce a generation manifest for review only when the user supplies or accepts the demo creative choices and a usage basis. Unknown duration or usage stays visible as unknown.
 - **Exit:** all MVP commands are available, tests pass, and reports distinguish simulated/manual steps from live generation.
 
+### Stage 7 — Local Codex web studio
+
+- Serve a loopback-only responsive UI through FastAPI/Uvicorn; keep the CLI available.
+- Send the user brief and selected project rules to Codex CLI in an ephemeral read-only run; require strict JSON, validate domain constraints, and write only to a new DRAFT project.
+- Automate prompt preparation, one-shot manifest creation, bounded task polling, result download, metadata capture, frame extraction, FFmpeg conform/QC, opt-in continuity review, user-confirmed ledger writes, sequential next-shot prompts and final render.
+- Preserve explicit creative approval, usage/budget approval and exact action-time send confirmation. Never auto-retry generation or submit a batch.
+- **Exit:** local UI reachable on loopback, Codex planning validates a complete 5–8-shot package, no provider request is sent before the UI send gate, and documentation covers startup, credentials, review and error recovery. A live full-episode run remains separate from UI implementation.
+
 ## CLI surface
 
 ```text
@@ -94,6 +106,7 @@ anistudio media inspect
 anistudio continuity update
 anistudio episode render
 anistudio episode qc
+anistudio web                       # optional local web studio
 ```
 
 `generation plan` is always local and non-submitting. `generation submit` rejects a DRAFT manifest, a changed approved manifest, unknown usage basis, missing budget, stale dependencies or a provider not enabled for submission.
@@ -104,3 +117,4 @@ anistudio episode qc
 - Use mocked HTTP responses for Muse2API adapter tests. Do not call a real generation endpoint during implementation.
 - The real-provider smoke test has been performed once with an approved one-shot prompt and cap. Future requests require their own approval, exact prompt, duration, reference plan and usage cap; do not generalize this single success into batch or quota guarantees.
 - Browser access to the user's Muse account, referral-token applicability, actual output duration/aspect ratio, reference adherence and continuity quality remain unknown.
+- Codex structured-output checks used a synthetic brief and did not persist a project or contact Muse. The new web path's live generation behavior, browser compatibility and full multi-shot render remain to be verified by a user-approved production run.

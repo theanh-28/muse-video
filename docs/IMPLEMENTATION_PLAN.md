@@ -28,8 +28,8 @@
 - Stage 5 is implemented and tested against a synthetic local fixture with installed FFmpeg/ffprobe. No Muse-generated media was used.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.
 - Unit tests: 37 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
-- Live smoke-test attempt on 2026-11-17: the authenticated gateway listed `muse-video`; one user-approved 10-second `SHOT_001` request was accepted as queued, then failed with `账号额度不足` (account quota insufficient). The CLI recorded the failure and did not retry. No output clip was downloaded or validated, so successful video generation remains unverified. The failed task and approved manifest are recorded under `projects/demo/episodes/EP001/generation/`.
-- Any next generation requires a fresh manifest after quota is resolved and newly approved usage/budget; do not resubmit the failed task.
+- Live smoke-test attempt on 2026-11-17: the authenticated gateway listed `muse-video`; one user-approved 10-second `SHOT_001` request was accepted as queued, then failed with the gateway's generic `账号额度不足` classification. A fresh probe of that same account showed Free-plan weekly usage at 8%, 2B additional tokens remaining, and 0% extra-token usage. The pinned gateway maps several page-tail phrases to the generic quota error and does not persist the matching source text, so the actual Muse-side cause is unresolved. No output clip was downloaded or validated, and no retry was sent.
+- Successful video generation remains unverified. The failed task and approved manifest are recorded under `projects/demo/episodes/EP001/generation/`. Do not retry that task; any new attempt needs better error capture, a fresh manifest, and approved usage/budget.
 
 ## Delivery stages
 

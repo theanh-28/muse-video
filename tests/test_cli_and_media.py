@@ -124,11 +124,21 @@ def test_cli_generation_gate_requires_storyboard_approval_and_manual_submit_is_n
         "--approved-by", "reviewer",
     ], input="y\n")
     assert approve.exit_code == 0, approve.output
+
+    queue_path = episode_path.parent / "generation" / "jobs.json"
+    dump_model(JobQueue(episode_id="EP001", jobs=[ShotJob(
+        job_id="JOB-FAILED-ATTEMPT",
+        shot_id="SHOT_001",
+        provider_mode="manual",
+        status=JobStatus.FAILED,
+        prompt="Previous failed prompt",
+        error="previous attempt failed",
+    )]), queue_path, overwrite=False)
     submit = runner.invoke(app, ["generation", "submit", str(manifest_path)], input="y\n")
     assert submit.exit_code == 0, submit.output
-    queue_path = episode_path.parent / "generation" / "jobs.json"
     queue = json.loads(queue_path.read_text(encoding="utf-8"))
-    assert queue["jobs"][0]["status"] == "awaiting_manual_media"
+    assert queue["jobs"][0]["status"] == "failed"
+    assert queue["jobs"][1]["status"] == "awaiting_manual_media"
     assert "No video was created" in submit.output
 
 

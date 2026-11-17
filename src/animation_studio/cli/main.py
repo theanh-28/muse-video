@@ -528,7 +528,9 @@ def generation_submit(manifest_file: Path = typer.Argument(..., exists=True, dir
         _fail(str(exc))
     queue_path = manifest_file.parent / "jobs.json"
     queue = _load_queue(queue_path, manifest.episode_id)
-    existing_ids = {job.shot_id for job in queue.jobs}
+    # Preserve prior failed attempts, but allow an explicitly approved fresh
+    # manifest to retry that shot. Active/queued work remains unique per shot.
+    existing_ids = {job.shot_id for job in queue.jobs if job.status != JobStatus.FAILED}
     for request in eligible:
         if request.shot_id in existing_ids:
             _fail(f"A job already exists for {request.shot_id}; inspect queue before continuing")

@@ -66,7 +66,7 @@ Theo yêu cầu mở rộng, các kỹ thuật phù hợp từ cả ba nguồn �
 - Router hiện được nhúng vào project context của Codex web qua `project_authoring_context()`. Các nguyên tắc cốt lõi cũng được ghi trong router để các lượt structured prompt cô lập không phụ thuộc việc chúng có thể đọc các thư mục skill khác hay không.
 - Skills chuyên biệt tham chiếu `Shot`, `ShotState`, `ActionBeat`, `CameraSpec`, `ReferenceSpec`, `WorldBible`, provider config, QC report và Continuity Ledger hiện có; không tạo nguồn dữ liệu sáng tạo thứ hai.
 - Các skills chỉ hướng dẫn lập kế hoạch/review. Storyboard, budget, request gửi Muse, ghi ledger và export tiếp tục theo trạng thái/cổng duyệt của project. Không hardcode capability snapshot hoặc duration chưa được xác minh.
-- Tài liệu này ghi nhận việc audit và ánh xạ nguồn; `SKILL.md` nội bộ chứa nội dung viết lại và liên kết source/license theo commit. Không bundle upstream code hoặc LICENSE file vì không copy file/code upstream.
+- Đợt tích hợp ba bộ animation skills ở trên chỉ viết lại hướng dẫn và không copy code upstream. Tích hợp YouTube Agent Pro ở mục dưới là một thay đổi riêng: có chọn lọc helper code và giữ MIT LICENSE trong từng thư mục có nội dung được copy.
 
 ### Trạng thái xác minh
 
@@ -77,3 +77,32 @@ Theo yêu cầu mở rộng, các kỹ thuật phù hợp từ cả ba nguồn �
 - `uv run python scripts/validate_skills.py` — thành công: 4 skill project-local có frontmatter YAML, tên thư mục/tên skill duy nhất và các link Markdown nội bộ hợp lệ.
 - `uv run pytest -q` — **38 passed**. Đây là suite hiện có của ứng dụng; nó không đo chất lượng nội dung sáng tạo hoặc chứng minh provider tuân thủ prompt.
 - Không gửi Muse generation request trong đợt mở rộng skills này. Việc triển khai skill không phải bằng chứng rằng Muse nhận prompt tốt hơn hoặc nội dung hình ảnh đã tự động đạt; end-to-end vẫn cần request được duyệt và review clip thật.
+
+## YouTube Agent Pro — lựa chọn metadata (2026-11-17)
+
+Repository: [ahmedsakri/youtube-agent-pro](https://github.com/ahmedsakri/youtube-agent-pro), OpenAI/Codex edition, pinned at `45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5`. The audited upstream license is MIT and credits Ahmed Sakri and Jake Schincariol. A copy of the upstream `openai/LICENSE` is retained in each copied skill and helper-only directory.
+
+### Allowlist and dependencies
+
+| Project-local path | Upstream content | Purpose |
+|---|---|---|
+| `.agents/skills/yt-package/` | `SKILL.md`, `title.py`, `agents/openai.yaml` | Title options and title/thumbnail packaging |
+| `.agents/skills/yt-thumbnail/` | `SKILL.md`, `thumblint.py`, `agents/openai.yaml` | Thumbnail concepts, text, and prompts |
+| `.agents/skills/yt-seo/` | `SKILL.md`, `references/youtube-metadata.md`, `agents/openai.yaml` | Accurate titles, descriptions, tags, and hashtags |
+| `.agents/skills/yt-chapters/` | `SKILL.md`, `chapters.py`, `agents/openai.yaml` | Timestamped chapter drafts |
+| `.agents/skills/yt/references/operating-guide.md` | Shared reference only; intentionally no `SKILL.md` | Profile, evidence, routing, and helper guidance used by the four skills |
+| `.agents/skills/yt-edit/deadair.py` | Helper only; intentionally no `SKILL.md` | Imported by the chapter helper |
+
+The upstream installer copies all sibling skills and does not provide a per-skill allowlist, so it was not run. Only the files listed above were copied manually after reading the installer, selected skill instructions, references, helper code, and MIT license. Local `yt-seo/SKILL.md` removes one link to the excluded `yt-analytics` skill and states the equivalent limitation directly. This local adaptation is documented here.
+
+### Deliberately excluded
+
+No other YouTube Agent Pro workflow is installed. In particular, `yt-idea`, `yt-script`, `yt-brief`, `yt-producer`, and `yt-strategist` are excluded. No OAuth, YouTube account integration, upload, scheduling, analytics API, third-party package install, or media generation is part of this integration.
+
+### Runtime and limitations
+
+- Python helpers are local text utilities; the audited helper code has no network/API call and no third-party Python package requirement. The project already provides Python through `uv`.
+- The title and thumbnail helper scores use English-oriented tokenization/heuristics. They may be run as structural checks, but are not valid Vietnamese quality measures or performance predictions.
+- The chapter helper can suggest boundaries from supplied text; its label vocabulary is English-oriented. Chapter labels and start times must be rewritten/verified against the finished video.
+- Read `config/youtube/THEANHREVIEW_PROFILE.md` for this channel. A channel profile does not override facts visible in the final media or a direct user instruction.
+- The full allowlist and usage workflow are documented in `docs/YOUTUBE_METADATA_WORKFLOW.md`.

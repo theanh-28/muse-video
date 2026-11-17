@@ -90,7 +90,8 @@ uv run python -m animation_studio.cli.main episode qc projects/my-show/final/epi
 
 - Skill router: `.agents/skills/anistudio-story-continuity/` — source of truth, continuity và cổng duyệt.
 - Ba skill chuyên biệt: `anistudio-drama-workbench` (story/bible/storyboard), `anistudio-muse-prompting` (prompt một shot theo capability hiện có), `anistudio-cinematic-qa` (camera/ánh sáng và QA dựa trên evidence).
-- Đây là các bản viết lại project-local, ánh xạ chọn lọc từ ba nguồn MIT đã pin; không cài nguyên gói, script hay API/browser workflow của bên thứ ba. Xem bảng ánh xạ và giới hạn tại `docs/THIRD_PARTY_SKILLS.md`.
+- Bốn skill metadata YouTube: `yt-package`, `yt-thumbnail`, `yt-seo`, `yt-chapters`; chỉ dùng sau khi có video thực tế. Bản tích hợp có helper và license MIT đã audit, không có đăng nhập, upload hoặc thao tác tài khoản YouTube.
+- Xem `.agents/skills/README.md`, `docs/THIRD_PARTY_SKILLS.md` và `docs/YOUTUBE_METADATA_WORKFLOW.md` để biết routing, nguồn, giới hạn và cách tạo metadata theo tập.
 - Quyết định provider và continuity: `docs/ADR/0001-provider-integration.md`, `docs/ADR/0002-continuity-strategy.md`.
 - Trạng thái kiểm chứng, rủi ro và giới hạn: `docs/IMPLEMENTATION_PLAN.md`, `docs/RESEARCH_NOTES.md`.
 - Không lưu cookie, session hoặc API key trong repo. Muse2API chỉ đọc bearer key từ biến môi trường khi người dùng tự cấu hình provider.

@@ -12,11 +12,11 @@ Continuity review gửi ba frame mẫu qua Codex chỉ khi người dùng bấm 
 3. Viết script; tách thoại, narration, action và sound cues.
 4. Tạo Character Bible, World/Location Bible và Prop Bible.
 5. Tạo continuity locks: ngoại hình, trang phục, phụ kiện, palette, tỷ lệ, dấu hiệu nhận diện.
-6. Chia shot theo nhịp hành động. Agent chọn số shot và phân bổ độ dài theo nội dung; không chia cơ học theo số giây hoặc chia đều tổng thời lượng trừ khi đó là chủ đích nhịp điệu. Mỗi shot cần hành động có mở/diễn biến/kết thúc rõ.
+6. Chia shot theo nhịp hành động. Agent chọn số shot và phân bổ độ dài theo nội dung; không chia cơ học theo số giây hoặc chia đều tổng thời lượng trừ khi đó là chủ đích nhịp điệu. Mỗi shot là một Muse video request, tối đa 10 giây. Nếu hành động dài hơn, tách tại beat có ý nghĩa thành nhiều shot và giữ continuity.
 
 ## Phase B — Storyboard and prompt package
 Mỗi shot phải có:
-- shot_id, sequence_id, planned_duration, target aspect ratio.
+- shot_id, sequence_id, planned_duration không quá 10 giây cho mỗi request Muse, target aspect ratio.
 - mục đích kể chuyện.
 - nhân vật xuất hiện (on-screen/off-screen).
 - trạng thái bắt đầu và kết thúc.

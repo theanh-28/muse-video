@@ -139,6 +139,8 @@ Hard requirements:
 - Assign each shot an intentional integer duration based on its action, dialogue, reaction, and
   pause needs. Do not divide the episode runtime evenly by default; use equal shot lengths only
   when the story's rhythm calls for them. Keep the total within 20% of the episode target.
+- Each shot maps to one Muse video request and must be 10 seconds or shorter. If an action needs
+  longer, split it into multiple shots at meaningful story beats while preserving continuity.
 - If a visual-style preference was supplied, preserve that exact phrase in visual_style; you may
   append compatible rendering details, but do not replace it with a different style.
 - Set episode_id to EP001, language to {brief.language}, aspect_ratio to {brief.aspect_ratio},
@@ -210,6 +212,8 @@ def _validate_package(package: CreativePackage, brief: StudioBrief) -> None:
     total_duration = sum(shot.planned_duration_seconds for shot in episode.shots)
     if any(int(shot.planned_duration_seconds) != shot.planned_duration_seconds for shot in episode.shots):
         raise StudioWorkflowError("Every shot must have an integer duration in seconds")
+    if any(shot.planned_duration_seconds > 10 for shot in episode.shots):
+        raise StudioWorkflowError("Each Muse shot must be 10 seconds or shorter")
     if abs(total_duration - brief.episode_duration_seconds) > max(3, brief.episode_duration_seconds * 0.2):
         raise StudioWorkflowError("Shot durations do not match the requested episode duration")
     character_ids = {item.character_id for item in package.character_bibles}

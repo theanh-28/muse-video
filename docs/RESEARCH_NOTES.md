@@ -18,7 +18,7 @@ Repository: https://github.com/masonmosen/muse-video-prompt-skill
 - Skill mô tả workflow prompt → generation → multi-segment stitching → frame verification.
 - SKILL.md đề cập prompt 6 phần, chia clip dài thành nhiều đoạn, tham chiếu continuation/snapshot ID và trích frame để tự kiểm tra.
 - Tài liệu nói không cam kết lock-face; tham chiếu ảnh không bảo đảm giữ nguyên gương mặt.
-- SKILL.md nêu đơn clip 10 giây là giới hạn trong workflow của tác giả; phải xác minh lại trên tài khoản/provider thực tế, không coi là bảo đảm toàn hệ thống.
+- SKILL.md nêu đơn clip 10 giây là giới hạn trong workflow của tác giả. Ngày 17/11/2026, người dùng xác nhận tài khoản Muse đang dùng cũng giới hạn mỗi video ở 10 giây; vì vậy repo áp dụng đây là giới hạn sản xuất cho tài khoản hiện tại, không khái quát sang tài khoản/provider khác. Adapter của repo kiểm tra trần 10 giây trước khi gửi; nếu đổi tài khoản hoặc gateway thì cần xác minh lại.
 - README/SKILL có ghi Muse built-in video generation gặp lỗi region 403 và lần kiểm tra được ghi ngày 05/11/2026. Đây là báo cáo của maintainer, không phải trạng thái đã được xác minh trên tài khoản của người dùng vào ngày hiện tại. Phải probe thực tế trước khi thiết kế automation.
 - License hiển thị: MIT. Giữ nguyên LICENSE và attribution.
 

@@ -48,7 +48,7 @@ App mở `http://127.0.0.1:8765`. Giữ terminal chạy trong lúc dùng. Nhấn
 
 ## 4. Tạo một project
 
-1. Nhập ý tưởng, audience, genre, phong cách, ngôn ngữ, tổng thời lượng và tỷ lệ khung hình. Codex tự chọn số lượng 5–8 shot và thời lượng riêng cho từng shot theo các beat và nhịp câu chuyện.
+1. Nhập ý tưởng, audience, genre, phong cách, ngôn ngữ, tổng thời lượng và tỷ lệ khung hình. Codex tự chọn số lượng 5–8 shot và thời lượng riêng theo nhịp câu chuyện; mỗi shot Muse tối đa 10 giây. Nếu cần dài hơn, Codex tách hành động tại các beat có ý nghĩa.
 2. Chọn **Gửi Codex phân tích**. Codex chỉ tạo phương án theo schema; không có request nào gửi Muse ở bước này. Nếu Codex CLI chưa đăng nhập, badge Codex báo chưa sẵn sàng.
 3. Xem logline, synopsis, Character Bible, World Bible/Prop Bible và chi tiết từng shot gồm state đầu/cuối, action beats, camera, audio, references, QA và continuity level.
 4. Nếu muốn tiếp tục với phương án đó, bấm **Duyệt storyboard và tạo prompt shot đầu**. Thao tác này lưu project mới trong `projects/studio/<project-id>/`, đổi storyboard/Bible sang `APPROVED`, rồi tự tạo prompt cho shot đầu. Shot phụ thuộc chưa có prompt cho đến khi shot trước được review.

@@ -21,6 +21,7 @@ Use this checklist while authoring the project's `Episode` and `Shot` models.
 - Does the shot begin from one concrete visible state and end at another?
 - Are beats ordered by cause and effect, with observable actions rather than internal-only intentions?
 - Can the selected action fit the planned duration? Simplify or split overloaded beats; do not add arbitrary micro-timing.
+- For Muse, is every individual shot 10 seconds or shorter? Split longer action at meaningful story beats into multiple shots; never send a single shot above the account's limit.
 - If dialogue or narration is specified, does the planned duration leave room for the words and the listener's reaction?
 
 ## Camera and visual locks

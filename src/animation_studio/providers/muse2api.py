@@ -20,6 +20,7 @@ from animation_studio.providers.base import (
 MAX_REFERENCE_ITEMS = 10
 MAX_REFERENCE_ITEM_BYTES = 40 * 1024 * 1024
 MAX_REFERENCE_TOTAL_BYTES = 100 * 1024 * 1024
+MAX_VIDEO_DURATION_SECONDS = 10
 MAX_RESULT_BYTES = 2 * 1024 * 1024 * 1024
 AUDITED_UPSTREAM_COMMIT = "19db32a3d6ef50dc87567a8ee0e35dd50c8f7837"
 
@@ -72,12 +73,13 @@ class Muse2ApiProvider:
             supports_video_reference=True,
             supports_native_continuation=False,
             min_duration_seconds=None,
-            max_duration_seconds=None,
+            max_duration_seconds=MAX_VIDEO_DURATION_SECONDS,
             aspect_ratios=(),
             evidence=(
                 f"Static source audit at {AUDITED_UPSTREAM_COMMIT}: image/video reference fields "
-                "exist; no enforced output-duration/aspect limits or native snapshot ID. "
-                "Live account and generation behavior are unverified."
+                "exist; the adapter enforces the current account's 10-second request cap, but the "
+                "upstream gateway does not advertise output-duration/aspect limits or native snapshot ID. "
+                "Live generation behavior is unverified."
             ),
         )
 
@@ -126,6 +128,10 @@ class Muse2ApiProvider:
             raise ProviderNotReady("Set MUSE2API_API_KEY outside the project before use")
         if not request.prompt.strip():
             raise ProviderError("Prompt must not be empty")
+        if request.duration_seconds > MAX_VIDEO_DURATION_SECONDS:
+            raise ProviderError(
+                f"Muse video duration exceeds the current account limit of {MAX_VIDEO_DURATION_SECONDS} seconds"
+            )
         if int(request.duration_seconds) != request.duration_seconds:
             raise ProviderError("Muse2API duration must be an integer number of seconds")
         payload: dict[str, Any] = {

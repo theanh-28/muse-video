@@ -5,7 +5,7 @@
   "episode_id": "EP001",
   "provider_mode": "muse2api_experimental",
   "smoke_test": true,
-  "status": "APPROVED",
+  "status": "SUBMITTED",
   "requests": [
     {
       "shot_id": "SHOT_001",

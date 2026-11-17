@@ -1,34 +1,28 @@
 {
-    "manifest_version":  1,
-    "manifest_id":  "MAN-20261117T080433Z-2fcbaaf9",
-    "created_at":  "2026-11-17T08:04:33.618779Z",
-    "episode_id":  "EP001",
-    "provider_mode":  "muse2api_experimental",
-    "smoke_test":  true,
-    "status":  "DRAFT",
-    "requests":  [
-                     {
-                         "shot_id":  "SHOT_001",
-                         "sequence_id":  "SEQ_001",
-                         "order":  1,
-                         "prompt":  "FORMAT: 6 seconds, C1, aspect ratio 16:9\nSHOT: SHOT_001 single-shot provider diagnostic; preserve the opening scene and do not advance the lantern story.\nVISUAL STYLE: 2D painterly animation with visible gouache texture, cool blue night fog, muted wet wood, soft natural movement.\nSUBJECT AND LOCKS:\n- Mai is an adult young woman with a warm medium-brown complexion, oval face, a small mole below her left eye, and black hair tied low.\n- She wears a dark olive coastal coat, a pale yellow scarf, and dark rubber boots.\n- The location is a narrow wet wooden pier at night. A short wooden post stands near the center; three mooring posts and dark water remain on the right.\n- A small brass storm lantern with slightly fogged glass and a curved handle rests on the post. It stays unlit for this shot.\nACTION OVER TIME:\n1. 0â€“2 seconds: Blue fog drifts across the boards. Mai stands on the left and looks down toward the pier.\n2. 2â€“4 seconds: Mai raises her eyes toward the unlit lantern. Keep the lantern fixed on the post.\n3. 4â€“6 seconds: Mai begins to lean toward the lantern but does not touch it. End before she reaches it.\nCAMERA: Wide establishing view easing into a medium-wide view; eye-level; one very slow, steady dolly-in; Mai stays left, lantern near center, water right.\nLIGHTING: Cool blue night light only. The unlit lantern emits no light.\nAUDIO: Soft sea wind, gentle water below the pier, one brief wooden creak; no dialogue.\nNEGATIVE CONSTRAINTS: No additional people, boats, matches, tools, other light sources, costume changes, hand contact with the lantern, cuts, camera shake, or text overlays.\nQA TARGETS: Mai remains left of the unlit brass lantern; the lantern stays on the post; the shot ends before contact; no other subject appears.",
-                         "duration_seconds":  6,
-                         "aspect_ratio":  "16:9",
-                         "references":  [
-
-                                        ],
-                         "depends_on":  [
-
-                                        ],
-                         "continuity_level":  "C1",
-                         "required_capabilities":  [
-
-                                                   ]
-                     }
-                 ],
-    "usage_estimate":  null,
-    "budget_limit":  null,
-    "approved_by":  null,
-    "approved_at":  null,
-    "approved_request_hash":  null
+  "manifest_version": 1,
+  "manifest_id": "MAN-20261117T080433Z-2fcbaaf9",
+  "created_at": "2026-11-17T08:04:33.618779Z",
+  "episode_id": "EP001",
+  "provider_mode": "muse2api_experimental",
+  "smoke_test": true,
+  "status": "APPROVED",
+  "requests": [
+    {
+      "shot_id": "SHOT_001",
+      "sequence_id": "SEQ_001",
+      "order": 1,
+      "prompt": "FORMAT: 6 seconds, C1, aspect ratio 16:9\nSHOT: SHOT_001 single-shot provider diagnostic; preserve the opening scene and do not advance the lantern story.\nVISUAL STYLE: 2D painterly animation with visible gouache texture, cool blue night fog, muted wet wood, soft natural movement.\nSUBJECT AND LOCKS:\n- Mai is an adult young woman with a warm medium-brown complexion, oval face, a small mole below her left eye, and black hair tied low.\n- She wears a dark olive coastal coat, a pale yellow scarf, and dark rubber boots.\n- The location is a narrow wet wooden pier at night. A short wooden post stands near the center; three mooring posts and dark water remain on the right.\n- A small brass storm lantern with slightly fogged glass and a curved handle rests on the post. It stays unlit for this shot.\nACTION OVER TIME:\n1. 0â€“2 seconds: Blue fog drifts across the boards. Mai stands on the left and looks down toward the pier.\n2. 2â€“4 seconds: Mai raises her eyes toward the unlit lantern. Keep the lantern fixed on the post.\n3. 4â€“6 seconds: Mai begins to lean toward the lantern but does not touch it. End before she reaches it.\nCAMERA: Wide establishing view easing into a medium-wide view; eye-level; one very slow, steady dolly-in; Mai stays left, lantern near center, water right.\nLIGHTING: Cool blue night light only. The unlit lantern emits no light.\nAUDIO: Soft sea wind, gentle water below the pier, one brief wooden creak; no dialogue.\nNEGATIVE CONSTRAINTS: No additional people, boats, matches, tools, other light sources, costume changes, hand contact with the lantern, cuts, camera shake, or text overlays.\nQA TARGETS: Mai remains left of the unlit brass lantern; the lantern stays on the post; the shot ends before contact; no other subject appears.",
+      "duration_seconds": 6.0,
+      "aspect_ratio": "16:9",
+      "references": [],
+      "depends_on": [],
+      "continuity_level": "C1",
+      "required_capabilities": []
+    }
+  ],
+  "usage_estimate": "1 Muse Video request; 6-second target, 16:9, no references",
+  "budget_limit": "Maximum 1 request for this manifest; no retries",
+  "approved_by": "AnhTruong",
+  "approved_at": "2026-11-17T08:05:21.263035Z",
+  "approved_request_hash": "5e16ddef574f40587982a83ac7c1954290511e83b5d81fd906644756c6ee7940"
 }

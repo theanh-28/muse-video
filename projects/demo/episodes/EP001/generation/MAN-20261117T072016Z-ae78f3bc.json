@@ -5,7 +5,7 @@
   "episode_id": "EP001",
   "provider_mode": "muse2api_experimental",
   "smoke_test": true,
-  "status": "DRAFT",
+  "status": "APPROVED",
   "requests": [
     {
       "shot_id": "SHOT_001",
@@ -20,9 +20,9 @@
       "required_capabilities": []
     }
   ],
-  "usage_estimate": null,
-  "budget_limit": null,
-  "approved_by": null,
-  "approved_at": null,
-  "approved_request_hash": null
+  "usage_estimate": "1 Muse Video generation request; 10-second target, 16:9, no references, one enabled account",
+  "budget_limit": "Maximum 1 generation request; no retries and no additional shots",
+  "approved_by": "AnhTruong",
+  "approved_at": "2026-11-17T07:25:01.231856Z",
+  "approved_request_hash": "570b2671e17a382d613cd9f9e1a86e78796f89895d26a755ef84c68d3eb3ad58"
 }

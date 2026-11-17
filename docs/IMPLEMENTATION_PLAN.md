@@ -28,7 +28,8 @@
 - Stage 5 is implemented and tested against a synthetic local fixture with installed FFmpeg/ffprobe. No Muse-generated media was used.
 - Stage 6 has a configurable five-shot DRAFT demo. Only SHOT_001 has a prompt and a one-shot DRAFT manifest; later dependent prompts remain deferred until their predecessor clip is actually reviewed.
 - Unit tests: 37 passed using the project virtual environment. `compileall` and the Codex Skill structure validator passed. These checks do not verify live provider access.
-- No generation request was sent. The demo manifest has no usage estimate or budget and is not approved. Real video remains gated on provider/access verification plus the user's explicit approval of a concrete manifest and usage cap.
+- Live smoke-test attempt on 2026-11-17: the authenticated gateway listed `muse-video`; one user-approved 10-second `SHOT_001` request was accepted as queued, then failed with `账号额度不足` (account quota insufficient). The CLI recorded the failure and did not retry. No output clip was downloaded or validated, so successful video generation remains unverified. The failed task and approved manifest are recorded under `projects/demo/episodes/EP001/generation/`.
+- Any next generation requires a fresh manifest after quota is resolved and newly approved usage/budget; do not resubmit the failed task.
 
 ## Delivery stages
 

@@ -5,7 +5,7 @@
       "job_id": "JOB-MAN-20261117T072016Z-ae78f3bc-SHOT_001",
       "shot_id": "SHOT_001",
       "provider_mode": "muse2api_experimental",
-      "status": "queued",
+      "status": "failed",
       "task_id": "task_dc27ab1f21e14211a8e5",
       "prompt": "FORMAT: 10 seconds, C1, aspect ratio 16:9\nSHOT: SHOT_001 — Giới thiệu Mai, cầu cảng và chiếc đèn đang tắt.\nVISUAL STYLE: 2D painterly animation, gouache texture, cool blue fog and warm amber lantern light\nSUBJECT AND LOCKS:\n- Mai (CHAR_A)\n- age_range_appearance: Người trưởng thành trẻ\n- face: Mặt trái xoan, lông mày đậm, nốt ruồi nhỏ dưới mắt trái\n- hair: Tóc đen buộc thấp, vài sợi tóc ướt bên thái dương\n- body_build: Dáng nhỏ gọn, vai hơi xuôi\n- skin_or_surface: Da ngăm ấm\n- identifying_marks: ['Nốt ruồi nhỏ dưới mắt trái']\n- voice_description: Giọng nữ ấm, bình tĩnh, nói ngắn gọn\n- Mặt trái xoan, nốt ruồi nhỏ dưới mắt trái, tóc đen buộc thấp và dáng nhỏ gọn.\n- CHAR_A_LOOK_01\n- COSTUME_A_01\n- LOC_01\n- PROP_LANTERN\nWORLD AND PROP LOCKS:\n- LOC_01 Cầu cảng trong sương: Sàn gỗ hẹp chạy từ tiền cảnh trái ra mép nước bên phải; trụ đèn cố định ở giữa khung hình.; landmarks trụ đèn gỗ thấp, ba cọc neo bên phải, đường chân trời mờ; time Đêm muộn; weather Sương dày, gió biển giật từng cơn; lighting Ánh xanh lạnh từ bầu trời đêm; ánh vàng chỉ phát ra từ chiếc đèn đồng.; palette Xanh lam xám, nâu gỗ ướt, vàng hổ phách\n- PROP_LANTERN Đèn đồng cầm tay: Đèn bão đồng nhỏ, kính hơi mờ, quai xách cong, bánh đánh lửa tích hợp ở thân.; initial owner Đặt trên trụ gỗ giữa cầu cảng; state rules Bắt đầu tắt., Sau khi đánh lửa, ngọn lửa vàng ổn định nhưng bị gió làm nghiêng., Mai giữ quai bằng tay trái từ shot 2 tới hết tập.\nSTART STATE: {\"screen_position\":\"Mai ở một phần ba trái; đèn đồng nằm trên trụ gỗ giữa khung hình.\",\"body_orientation\":\"Mai đứng nghiêng ba phần tư về bên phải khung hình.\",\"eyeline\":\"Nhìn xuống mặt sàn ướt, sau đó dừng ở chiếc đèn.\",\"pose_or_motion\":\"Đứng yên, vai hơi co vì gió.\",\"left_hand\":\"Thả dọc thân người.\",\"right_hand\":\"Giữ vạt áo khoác.\",\"held_props\":[],\"costume_condition\":\"Áo khoác xanh rêu và khăn vàng nhạt, ướt nhẹ vì sương.\",\"injuries_or_marks\":\"Không có.\",\"environment\":\"Cầu cảng gỗ trong sương đêm; trụ đèn cố định ở giữa khung hình.\",\"prop_positions\":[\"PROP_LANTERN đặt trên trụ gỗ\",\"đang tắt\"],\"lighting\":\"Xanh lạnh; chưa có ánh vàng.\",\"camera_state\":\"Toàn cảnh tĩnh, ngang tầm mắt, cầu cảng dẫn từ trái sang phải.\",\"story_state\":\"Mai nhận ra đèn hiệu đã tắt.\"}\nSCENE: Cầu cảng gỗ trong sương đêm; trụ đèn cố định ở giữa khung hình.\nACTION OVER TIME:\n1. 0-3s: Sương lướt qua mặt cầu cảng; Mai nhìn xuống sàn ướt. Camera: Máy quay tiến chậm vào trung cảnh.. Sound: Gió biển nhẹ và tiếng nước vỗ dưới sàn gỗ..\n2. 3-7s: Mai nâng mắt và nhận ra chiếc đèn đang tắt trên trụ. Camera: Giữ hướng nhìn từ trái sang phải..\n3. 7-10s: Mai nghiêng người về phía chiếc đèn nhưng chưa chạm vào. Sound: Một tiếng gỗ kẽo kẹt ngắn..\nEND STATE: {\"screen_position\":\"Mai ở bên trái; chiếc đèn ở giữa, cả hai cùng nhìn thấy.\",\"body_orientation\":\"Mai hướng ba phần tư về chiếc đèn bên phải.\",\"eyeline\":\"Nhìn vào quai đèn.\",\"pose_or_motion\":\"Đang bắt đầu nghiêng người tới trước.\",\"left_hand\":\"Còn thả, cách quai đèn một khoảng.\",\"right_hand\":\"Buông vạt áo.\",\"held_props\":[],\"costume_condition\":\"Không đổi so với đầu shot.\",\"injuries_or_marks\":\"Không có.\",\"environment\":\"Sương che đường chân trời; trụ đèn không đổi vị trí.\",\"prop_positions\":[\"PROP_LANTERN trên trụ gỗ\",\"đang tắt\"],\"lighting\":\"Xanh lạnh, không có ánh vàng.\",\"camera_state\":\"Trung cảnh, dolly-in nhẹ, kết thúc khi Mai bắt đầu với tay.\",\"story_state\":\"Mai quyết định kiểm tra đèn.\"}\nCAMERA: Toàn cảnh chuyển dần sang trung cảnh; Ngang tầm mắt; Dolly-in rất chậm; Góc nhìn tự nhiên, phối cảnh mềm; focus Giữ Mai và đèn cùng đọc được; screen direction Mai trái, đèn giữa, mặt nước phải\nLIGHTING: Ánh đêm xanh lạnh; đèn chưa sáng.\nAUDIO: gió biển nhẹ; nước vỗ; sàn gỗ kẽo kẹt; Một nốt dây trầm, nhỏ.\nREFERENCE PLAN:\nShot mở đầu; dùng Bible chữ DRAFT, chưa có ảnh nhân vật/địa điểm được duyệt.\n- None supplied; follow the written state and record continuity risk.\nNEGATIVE CONSTRAINTS:\n- Không thêm nhân vật\n- thuyền\n- diêm\n- dụng cụ hoặc nguồn sáng khác.\nQA TARGETS:\n- Mai ở trái và đèn ở giữa; đèn vẫn tắt; không có nhân vật khác.",
       "request_parameters": {
@@ -16,7 +16,7 @@
         "depends_on": []
       },
       "created_at": "2026-11-17T07:25:45.271475Z",
-      "updated_at": "2026-11-17T07:25:45.729702Z",
+      "updated_at": "2026-11-17T07:26:15.296458Z",
       "completed_at": null,
       "output_path": null,
       "provider_model": null,
@@ -24,7 +24,7 @@
       "media_sha256": null,
       "media_imported_at": null,
       "media_metadata": null,
-      "error": null
+      "error": "账号额度不足"
     }
   ]
 }

@@ -35,6 +35,7 @@ The project remains **unverified for submission**. Reference capabilities, accou
 
 ## Current deployment boundary
 
+- Deployment verified on 2026-11-17: image built from the pinned checkout; container is running; host port resolves to `127.0.0.1:18610`; authenticated `GET /v1/models` returned HTTP 200 with 3 model entries; account store contains 0 accounts.
 - Gateway process may run with no Muse account imported.
 - No Muse credentials/session were imported and no generation request was sent during deployment.
 - API-key/model-list checks are connectivity checks only. They do not prove Muse session validity or video-generation capability.

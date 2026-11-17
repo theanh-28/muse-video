@@ -26,9 +26,16 @@ class StudioBrief(BaseModel):
     visual_style: str = Field(default="", max_length=500)
     language: str = Field(default="vi-VN", min_length=2, max_length=20)
     episode_duration_seconds: int = Field(default=30, ge=20, le=180)
-    shot_count: int = Field(default=5, ge=5, le=8)
     aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
     provider_mode: Literal["muse2api_experimental"] = "muse2api_experimental"
+
+    @model_validator(mode="before")
+    @classmethod
+    def ignore_legacy_shot_count(cls, value):
+        if isinstance(value, dict) and "shot_count" in value:
+            value = dict(value)
+            value.pop("shot_count")
+        return value
 
 
 class CharacterIdentityFact(BaseModel):

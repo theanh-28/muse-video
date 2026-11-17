@@ -7,12 +7,12 @@ Có thể nhập brief trong web app và để Codex CLI tạo Bible/storyboard 
 Continuity review gửi ba frame mẫu qua Codex chỉ khi người dùng bấm nút. Ledger chỉ được ghi sau khi người dùng xem và chấp nhận assessment. Sau đó app mới tạo prompt cho shot kế tiếp từ actual end state và last frame. Episode chỉ export khi mọi shot cần thiết đã review và QC_PASSED. Hướng dẫn chạy: [USER_GUIDE_WEB.md](USER_GUIDE_WEB.md).
 
 ## Phase A — Development
-1. Nhận brief, thể loại, đối tượng khán giả, độ dài và format.
+1. Nhận brief, thể loại, đối tượng khán giả, tổng thời lượng và format. Agent tự chọn số shot và thời lượng từng shot theo các beat cần kể; không giao quyết định này cho người dùng.
 2. Viết logline, premise, synopsis và beat sheet.
 3. Viết script; tách thoại, narration, action và sound cues.
 4. Tạo Character Bible, World/Location Bible và Prop Bible.
 5. Tạo continuity locks: ngoại hình, trang phục, phụ kiện, palette, tỷ lệ, dấu hiệu nhận diện.
-6. Chia shot theo nhịp hành động. Không chia cơ học theo số giây; chia theo hành động có mở/diễn biến/kết thúc rõ.
+6. Chia shot theo nhịp hành động. Agent chọn số shot và phân bổ độ dài theo nội dung; không chia cơ học theo số giây hoặc chia đều tổng thời lượng trừ khi đó là chủ đích nhịp điệu. Mỗi shot cần hành động có mở/diễn biến/kết thúc rõ.
 
 ## Phase B — Storyboard and prompt package
 Mỗi shot phải có:

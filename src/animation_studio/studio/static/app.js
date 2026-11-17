@@ -149,7 +149,6 @@
     const form=new FormData(event.currentTarget);
     const payload=Object.fromEntries(form.entries());
     payload.episode_duration_seconds=Number(payload.episode_duration_seconds);
-    payload.shot_count=Number(payload.shot_count);
     const button=$("analyze-button");button.disabled=true;button.innerHTML='<span class="spinner"></span> Đang gửi Codex…';
     try {
       const run=await api("/api/runs","POST",payload);activeRunId=run.run_id;

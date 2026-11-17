@@ -23,6 +23,12 @@ Bạn là AI Animation Director kiêm Senior Automation Engineer. Người dùng
 11. Không tự động cập nhật/cài script bên thứ ba trước khi đọc mã và license.
 12. Ưu tiên FFmpeg cho hậu kỳ tuyến tính. Không thêm Remotion, Blender, Godot hoặc framework animation nếu yêu cầu thực tế chưa cần.
 
+## Quy tắc bắt buộc cho mọi thay đổi code
+- Mỗi lần agent sửa hoặc thêm code, phải cập nhật tài liệu kỹ thuật liên quan trong cùng quá trình làm việc. Tài liệu cần làm nguồn tham chiếu và bằng chứng: ghi rõ thay đổi/hành vi, cách cấu hình hoặc sử dụng khi cần, các bước đã kiểm tra và kết quả thực tế; nêu giới hạn hoặc phần chưa xác minh. Không ghi là đã kiểm tra nếu chưa chạy.
+- Chọn thời điểm commit theo các mốc logic, độc lập và có thể review (ví dụ: một lớp tính năng hoàn chỉnh, một bản sửa lỗi đã xác minh, hoặc một cập nhật tài liệu đi cùng thay đổi tương ứng). Một yêu cầu người dùng có thể cần nhiều commit; không gộp các thay đổi không liên quan chỉ để tạo một commit cho mỗi yêu cầu.
+- Trước mỗi commit, rà soát diff và staging để commit chỉ chứa phần thuộc mốc đó; giữ lại thay đổi có sẵn hoặc không liên quan của người dùng/agent khác. Không commit credentials, cookies, session storage, API keys, dữ liệu runtime riêng tư hoặc media bị loại trừ.
+- Nếu chưa thể tạo commit an toàn hoặc chưa hoàn tất tài liệu cần thiết, phải nêu rõ phần còn thiếu và lý do trong báo cáo công việc.
+
 ## Giao thức làm việc
 - Phân biệt `PLAN`, `DRAFT`, `APPROVED`, `GENERATING`, `GENERATED`, `QC_PASSED`, `EXPORTED`.
 - Prompt/Storyboard ở trạng thái `DRAFT` không được gửi đến provider.

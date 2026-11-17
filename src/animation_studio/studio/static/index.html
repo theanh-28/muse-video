@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="studio-token" content="__STUDIO_TOKEN__">
+  <title>Muse Animation Studio</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">M</div><div><strong>Muse Studio</strong><small>CODEx · STORY · VIDEO</small></div></div>
+      <button id="new-run" class="new-button"><span>＋</span> Dự án mới</button>
+      <div class="side-label">LỊCH SỬ SẢN XUẤT</div>
+      <div id="run-list" class="run-list"><div class="muted pad">Chưa có dự án mới</div></div>
+      <div class="side-foot"><span class="pulse"></span> Chạy riêng trên máy này</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow">AI ANIMATION WORKFLOW</div><h1 id="page-title">Bắt đầu một câu chuyện</h1></div>
+        <div class="health-group">
+          <div class="health-pill" id="codex-health"><i></i><span>Codex</span><b>Đang kiểm tra</b></div>
+          <div class="health-pill" id="gateway-health"><i></i><span>Muse gateway</span><b>Đang kiểm tra</b></div>
+        </div>
+      </header>
+
+      <div class="workflow-strip" id="workflow-strip">
+        <div class="flow-step active"><span>01</span><small>Brief</small></div><div class="flow-line"></div>
+        <div class="flow-step"><span>02</span><small>Codex phân tích</small></div><div class="flow-line"></div>
+        <div class="flow-step"><span>03</span><small>Duyệt storyboard</small></div><div class="flow-line"></div>
+        <div class="flow-step"><span>04</span><small>Tạo video</small></div><div class="flow-line"></div>
+        <div class="flow-step"><span>05</span><small>QC & continuity</small></div><div class="flow-line"></div>
+        <div class="flow-step"><span>06</span><small>Xuất phim</small></div>
+      </div>
+
+      <section id="new-view" class="content-card">
+        <div class="intro-row"><div><div class="eyebrow">MÔ TẢ Ý TƯỞNG</div><h2>Cho Codex biết bạn muốn kể câu chuyện gì</h2><p>Codex sẽ đề xuất Bible, storyboard 5–8 shot và cấu trúc dự án ở trạng thái DRAFT. Chưa có video nào được gửi ở bước này.</p></div><div class="intro-icon">✦</div></div>
+        <form id="brief-form">
+          <label class="field full"><span>Ý tưởng / yêu cầu sản xuất <em>*</em></span><textarea name="brief" required minlength="20" maxlength="8000" placeholder="Ví dụ: Một cô bé sửa chiếc đèn biển trong đêm bão, phong cách hoạt hình màu nước, ấm áp và phù hợp gia đình…"></textarea><small>Ghi rõ nhân vật, diễn biến, cảm xúc, điều không muốn xuất hiện và kết thúc mong muốn.</small></label>
+          <div class="form-grid">
+            <label class="field"><span>Tên dự án (có thể để trống)</span><input name="title_hint" maxlength="160" placeholder="Codex sẽ đề xuất tên"></label>
+            <label class="field"><span>Thể loại</span><input name="genre" value="Hoạt hình ngắn" maxlength="240"></label>
+            <label class="field"><span>Khán giả</span><input name="audience" value="Gia đình" maxlength="240"></label>
+            <label class="field"><span>Phong cách hình ảnh (tùy chọn)</span><input name="visual_style" maxlength="500" placeholder="Ví dụ: 2D gouache, sương xanh, ánh đèn ấm"></label>
+            <label class="field"><span>Thời lượng dự kiến</span><div class="input-suffix"><input name="episode_duration_seconds" type="number" min="20" max="180" value="30" required><b>giây</b></div></label>
+            <label class="field"><span>Số shot</span><select name="shot_count"><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+            <label class="field"><span>Tỷ lệ khung hình</span><select name="aspect_ratio"><option value="16:9">16:9 · ngang</option><option value="9:16">9:16 · dọc</option><option value="1:1">1:1 · vuông</option></select></label>
+            <label class="field"><span>Ngôn ngữ nội dung</span><select name="language"><option value="vi-VN">Tiếng Việt</option><option value="en-US">English</option></select></label>
+          </div>
+          <div class="privacy-note"><span>🔒</span><div><strong>Riêng tư và an toàn</strong><p>Brief được gửi đến Codex CLI đã đăng nhập trên máy này. Muse chỉ nhận prompt khi bạn duyệt manifest và bấm gửi riêng. Gateway giữ trên localhost.</p></div></div>
+          <div class="form-actions"><span class="muted">Phân tích có thể dùng hạn mức Codex của bạn.</span><button class="primary-button" type="submit" id="analyze-button">✦ Gửi Codex phân tích</button></div>
+        </form>
+      </section>
+
+      <section id="run-view" class="content-card hidden"></section>
+      <footer><span>Codex lập kế hoạch · Muse tạo video · FFmpeg kiểm tra và xuất</span><a href="https://127.0.0.1" hidden></a><span id="local-badge">LOCAL ONLY</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>

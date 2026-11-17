@@ -7,6 +7,8 @@ import os
 import re
 import sys
 import unicodedata
+import threading
+import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -913,6 +915,25 @@ def episode_qc(
         _fail(str(exc))
     typer.echo(f"QC {report['status']}: {report_path}")
     typer.echo(json.dumps(report["checks"], indent=2))
+
+
+@app.command("web")
+def web_studio(
+    port: int = typer.Option(8765, "--port", min=1024, max=65535, help="Local web UI port"),
+    open_browser: bool = typer.Option(False, "--open-browser", help="Open the local studio in your browser"),
+) -> None:
+    """Run the local Codex-driven animation studio UI."""
+    try:
+        import uvicorn
+        from animation_studio.studio.web_app import create_app
+    except ImportError as exc:
+        _fail("Install the web dependencies first: uv sync --extra web")
+    url = f"http://127.0.0.1:{port}"
+    typer.echo(f"Muse Animation Studio: {url}")
+    typer.echo("Local-only server. Press Ctrl+C to stop.")
+    if open_browser:
+        threading.Timer(1.0, webbrowser.open, args=(url,)).start()
+    uvicorn.run(create_app(), host="127.0.0.1", port=port, log_level="info")
 
 
 if __name__ == "__main__":

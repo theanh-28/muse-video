@@ -51,7 +51,7 @@ App mở `http://127.0.0.1:8765`. Giữ terminal chạy trong lúc dùng. Nhấn
 1. Nhập ý tưởng, audience, genre, phong cách, ngôn ngữ, tổng thời lượng và tỷ lệ khung hình. Codex tự chọn số lượng 5–8 shot và thời lượng riêng theo nhịp câu chuyện; mỗi shot Muse tối đa 10 giây. Nếu cần dài hơn, Codex tách hành động tại các beat có ý nghĩa.
 2. Chọn **Gửi Codex phân tích**. Codex chỉ tạo phương án theo schema; không có request nào gửi Muse ở bước này. Nếu Codex CLI chưa đăng nhập, badge Codex báo chưa sẵn sàng.
 3. Xem logline, synopsis, Character Bible, World Bible/Prop Bible và chi tiết từng shot gồm state đầu/cuối, action beats, camera, audio, references, QA và continuity level.
-4. Nếu muốn tiếp tục với phương án đó, bấm **Duyệt storyboard và tạo prompt shot đầu**. Thao tác này lưu project mới trong `projects/studio/<project-id>/`, đổi storyboard/Bible sang `APPROVED`, rồi tự tạo prompt cho shot đầu. Shot phụ thuộc chưa có prompt cho đến khi shot trước được review.
+4. Nếu muốn tiếp tục với phương án đó, bấm **Duyệt storyboard và tạo prompt shot đầu**. Thao tác này lưu project mới trong `projects/studio/<project-id>/`, đổi storyboard/Bible sang `APPROVED`, rồi gọi Codex với skill Muse Prompting để soạn prompt shot đầu. Prompt được lưu nguyên văn. Shot phụ thuộc chưa có prompt cho đến khi shot trước được review.
 
 Run JSON và usage Codex lưu ở `data/studio/runs/`. Các file Bible, episode, prompt, ledger, manifest, queue, report và media nằm trong project mới. App không sửa demo hoặc Bible của project khác.
 
@@ -76,7 +76,18 @@ Khi clip và first/middle/last frame đã sẵn sàng:
 5. Lặp lại từng shot. App không chạy generation hàng loạt hoặc chạy song song các shot phụ thuộc.
 6. Khi toàn bộ shot có output review và QC_PASSED, bấm **Render và QC episode**. File MP4 và báo cáo QC xuất trong `output/exports/` và `output/qc/`.
 
-## 7. Trạng thái và lỗi thường gặp
+## 7. Tạo bản nháp YouTube SEO và metadata
+
+Sau khi episode xuất thành công với QC `PASS`, mở project đã hoàn tất và dùng phần **YouTube SEO & Metadata**:
+
+1. Dán transcript SRT/VTT đã khớp với MP4 nếu muốn tạo chapter. Có thể để trống; khi đó app bỏ qua chapter.
+2. Bấm **Tạo bản nháp YouTube SEO & thumbnail**. Codex nhận các frame đầu/giữa/cuối của MP4 cuối, project profile và continuity ledger. Nó không nhận toàn bộ video hoặc nghe audio trong bước này.
+3. Xem tiêu đề, description, tags, hashtag, thumbnail concepts và các ghi chú. Mở thư mục được hiển thị để xem các file đầy đủ và helper checks.
+4. Nếu có chapter, đối chiếu mọi mốc với MP4. Helper chỉ kiểm tra cấu trúc/timestamp; không chứng minh nội dung chapter chính xác.
+
+Bản nháp được lưu trong `episodes/EP001/metadata/draft-<timestamp>-<id>/`. App không đăng nhập YouTube, upload, lên lịch hoặc publish.
+
+## 8. Trạng thái và lỗi thường gặp
 
 | Trạng thái | Ý nghĩa | Việc cần làm |
 |---|---|---|
@@ -94,10 +105,11 @@ Khi clip và first/middle/last frame đã sẵn sàng:
 
 Nếu badge Muse gateway chưa kết nối: kiểm tra Docker, bearer key trong đúng terminal, và `projects/studio/<id>/project.yaml` vẫn trỏ tới loopback. Nếu Codex chưa sẵn sàng: kiểm tra `codex --version`, `codex login` và `ANISTUDIO_CODEX_EXE` nếu cần. Không đưa key/cookie vào brief hoặc chat.
 
-## 8. Phạm vi và giới hạn
+## 9. Phạm vi và giới hạn
 
 - Codex CLI dùng tài khoản/usage Codex hiện có; brief và ảnh continuity bạn chủ động gửi sẽ được đưa cho Codex để xử lý.
 - Muse2API là gateway thử nghiệm không chính thức. Một smoke request đã thành công trên tài khoản hiện tại; điều đó không bảo đảm request khác, duration khác, reference adherence hoặc batch reliability.
 - UI không hỗ trợ upload reference assets trong phiên bản đầu; Codex không được phép tự bịa đường dẫn ảnh.
 - Một request lỗi không được tự retry. Muốn thử lại phải đọc kết quả, tạo manifest mới và duyệt usage/budget lại.
 - UI local hiện điều phối story/prompt/generation/media/QC/export; không tự động publish hoặc upload video ra dịch vụ khác.
+- YouTube metadata chỉ chạy sau export QC `PASS`. Lint score dùng heuristic tiếng Anh, không phải đánh giá chất lượng tiếng Việt hay dự đoán hiệu quả. Khung hình đại diện không chứng minh được chuyển động hoặc nội dung audio.

@@ -89,12 +89,70 @@ class CreativePackage(BaseModel):
     codex_notes: list[str] = Field(default_factory=list, max_length=20)
 
 
+class CodexPromptDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=40, max_length=20000)
+
+
 class ContinuityAssessment(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     actual_end_state: ShotState
     reviewer_notes: list[str] = Field(default_factory=list, max_length=20)
     continuity_risks: list[str] = Field(default_factory=list, max_length=20)
+
+
+class YouTubeMetadataRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timestamped_transcript: str = Field(default="", max_length=100000)
+
+
+class YouTubeTitleOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=100)
+    thumbnail_text: str = Field(default="", max_length=60)
+    rationale: str = Field(min_length=1, max_length=500)
+
+
+class YouTubeThumbnailConcept(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    concept_id: str = Field(pattern=r"^[A-Z0-9_-]+$")
+    focal_idea: str = Field(min_length=1, max_length=400)
+    visual_elements: list[str] = Field(min_length=1, max_length=3)
+    framing: str = Field(min_length=1, max_length=300)
+    background_contrast: str = Field(min_length=1, max_length=300)
+    overlay_text: str = Field(default="", max_length=80)
+    emotion_or_hook: str = Field(min_length=1, max_length=240)
+    image_prompt: str = Field(min_length=1, max_length=2000)
+    recommendation: Literal["lead", "alternative", "reserve"]
+
+
+class YouTubeChapterDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timestamp: str = Field(min_length=4, max_length=8)
+    title: str = Field(min_length=1, max_length=100)
+
+
+class YouTubeMetadataDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    observed_facts: list[str] = Field(min_length=1, max_length=24)
+    uncertainties: list[str] = Field(default_factory=list, max_length=24)
+    topic_phrases: list[str] = Field(min_length=1, max_length=8)
+    title_options: list[YouTubeTitleOption] = Field(min_length=10, max_length=10)
+    selected_title: str = Field(min_length=1, max_length=100)
+    thumbnail_concepts: list[YouTubeThumbnailConcept] = Field(min_length=3, max_length=3)
+    description: str = Field(min_length=1, max_length=5000)
+    tags: list[str] = Field(default_factory=list)
+    hashtags: list[str] = Field(default_factory=list, max_length=60)
+    chapters: list[YouTubeChapterDraft] = Field(default_factory=list, max_length=12)
+    chapters_note: str = Field(min_length=1, max_length=1000)
+    editorial_notes: list[str] = Field(default_factory=list, max_length=24)
 
 
 class CreativeApproval(BaseModel):
@@ -155,6 +213,9 @@ class StudioRun(BaseModel):
     next_shot_prompt: str | None = None
     error: str | None = None
     codex_usage: dict[str, int] | None = None
+
+    youtube_metadata_dir: str | None = None
+    youtube_metadata_summary: dict[str, object] | None = None
 
     @model_validator(mode="after")
     def keep_error_for_failed_runs(self) -> "StudioRun":

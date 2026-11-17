@@ -33,10 +33,11 @@
     return "";
   }
 
-  function updateStepper(status) {
+  function updateStepper(status, hasYouTubeMetadata = false) {
     const active = status === "ANALYZING" || status === "FAILED" ? 1 : status === "DRAFT_READY" ? 2 :
       ["PLAN_APPROVED","MANIFEST_DRAFT","MANIFEST_APPROVED","SUBMITTED","RUNNING"].includes(status) ? 3 :
-      ["MEDIA_READY","QC_WARN","REVIEW_READY","REVIEWED"].includes(status) ? 4 : status.startsWith("EXPORT") || status === "EXPORTED" ? 5 : 1;
+      ["MEDIA_READY","QC_WARN","REVIEW_READY","REVIEWED"].includes(status) ? 4 :
+      status === "EXPORTED" && hasYouTubeMetadata ? 6 : status.startsWith("EXPORT") || status === "EXPORTED" ? 5 : 1;
     document.querySelectorAll(".flow-step").forEach((el,i) => { el.classList.toggle("active",i===active);el.classList.toggle("done",i<active); });
   }
 
@@ -98,7 +99,7 @@
   function renderRun(run, quiet=false) {
     const view=$("run-view"); const p=run.analysis; const hasPlan=!!p;
     $("page-title").textContent=p?.project_title||run.brief.title_hint||"Đang tạo dự án";
-    updateStepper(run.status);
+    updateStepper(run.status, Boolean(run.youtube_metadata_summary));
     const header=`<div class="section-head"><div><div class="eyebrow">RUN ${esc(run.run_id)}</div><h2>${esc(p?.project_title||"Codex đang chuẩn bị")}</h2><p>${esc(p?.episode?.title||"Brief đang được phân tích")}${run.project_dir?` · <span class="code">${esc(run.project_dir.replaceAll('\\','/').split('/').slice(-2).join('/'))}</span>`:""}</p></div><span class="status-tag ${badgeClass(run.status)}">${esc(statusLabel(run.status))}</span></div>`;
     let body="";
     if(run.status==="ANALYZING") body=`<div class="empty-state"><span class="spinner"></span><strong>Codex đang đọc brief và dựng phương án</strong><span>Ứng dụng chỉ nhận JSON theo schema; chưa gửi yêu cầu tới Muse.</span></div>`;
@@ -112,7 +113,11 @@
     if(["MEDIA_READY","QC_WARN","REVIEW_READY"].includes(run.status)) {
       body=`${mediaHtml(run)}${run.status==="REVIEW_READY"?reviewHtml(run):`<div class="notice">Clip đã được tải, kiểm tra stream, giải mã, trích frame và QC. Bấm nút dưới để gửi ba frame mẫu cho Codex phân tích continuity; ledger chỉ thay đổi sau khi bạn xác nhận kết quả.</div><div class="panel-actions"><button class="primary-button" id="analyze-continuity">Gửi 3 frame cho Codex review</button></div>`}`;
     }
-    if(run.status==="EXPORTED" || run.status==="EXPORT_QC_WARN") body=`<div class="media-box"><video controls preload="metadata" src="/api/runs/${encodeURIComponent(run.run_id)}/video/export"></video></div><div class="success-box">Episode đã render: ${esc(run.export_path)} · QC ${esc(run.qc_report?.status)}</div>`;
+    if(run.status==="EXPORTED" || run.status==="EXPORT_QC_WARN") {
+      const metadata=run.youtube_metadata_summary;
+      const metadataPanel=run.status==="EXPORTED"?`<section class="summary-box"><h3>YOUTUBE SEO & METADATA · BẢN NHÁP</h3>${metadata?`<p><b>Tiêu đề được chọn:</b> ${esc(metadata.selected_title)}</p><p><b>Thư mục:</b> <span class="code">${esc(metadata.directory)}</span></p><div><b>Top 3 title theo lint cấu trúc:</b>${(metadata.top_titles||[]).map((item,index)=>`<p>${index+1}. ${esc(item.title)} · ${esc(item.score)}/100 · ${esc((item.issues||[]).join("; ")||"không có cảnh báo")}</p>`).join("")}</div><p>${esc(metadata.chapter_count||0)} chapter · thumbnail lint: ${esc(metadata.thumbnail_helper_warning_count||0)} cảnh báo</p><pre>${esc(metadata.description||"")}</pre><p><b>Tags:</b> ${esc((metadata.tags||[]).join(", ")||"(không có)")}</p><p><b>Hashtags:</b> ${esc((metadata.hashtags||[]).join(" ")||"(không có)")}</p><p><b>Thumbnail concepts:</b> ${esc((metadata.thumbnail_concepts||[]).map(item=>`${item.recommendation}: ${item.focal_idea} · ${item.framing} · ${item.overlay_text||"không chữ"}`).join(" | "))}</p><p><b>Chapters:</b> ${esc((metadata.chapters||[]).map(item=>`${item.timestamp} ${item.title}`).join(" · ")||metadata.chapters_note||"Không có")}</p><div class="notice">Điểm lint là heuristic cấu trúc, không phải dự đoán hiệu quả. Không có nội dung nào được upload hoặc publish.</div>`:`<p>Codex sẽ nhận frame đầu/giữa/cuối của MP4, storyboard, continuity ledger và transcript nếu bạn cung cấp qua backend Codex/LLM đã cấu hình. Không gửi toàn bộ video hoặc audio. Bản nháp chỉ được lưu trên máy này.</p><label class="field full"><span>Transcript có timestamp (tùy chọn; cần để tạo chapter)</span><textarea id="youtube-transcript" maxlength="100000" placeholder="Dán nội dung SRT/VTT đã khớp với bản xuất. Bỏ trống nếu chưa có transcript; khi đó chapter sẽ được bỏ qua."></textarea><small>Codex chỉ tạo chapter khi transcript và thời lượng video đáp ứng điều kiện; bạn cần đối chiếu timestamp với MP4.</small></label><div class="panel-actions"><button class="primary-button" id="draft-youtube-metadata">Tạo bản nháp YouTube SEO & thumbnail</button></div>`}</section>`:"";
+      body=`<div class="media-box"><video controls preload="metadata" src="/api/runs/${encodeURIComponent(run.run_id)}/video/export"></video></div><div class="success-box">Episode đã render: ${esc(run.export_path)} · QC ${esc(run.qc_report?.status)}</div>${metadataPanel}`;
+    }
     if(run.status==="FAILED") body=`${hasPlan?planHtml(run):""}<div class="alert">${esc(run.error||"Codex hoặc provider báo lỗi.")}</div><div class="notice">Generation lỗi sẽ không tự gửi lại. Kiểm tra manifest, task record và gateway trước khi bắt đầu một request mới.</div>`;
     view.innerHTML=header+(run.error&&run.status!=="FAILED"?`<div class="alert">${esc(run.error)}</div>`:"")+body;
     if(run.status==="DRAFT_READY") $("approve-plan")?.addEventListener("click",()=>action("/api/runs/"+run.run_id+"/approve-plan","POST",{confirm:true},"Đã duyệt storyboard"));
@@ -125,6 +130,7 @@
     $("analyze-continuity")?.addEventListener("click",()=>action("/api/runs/"+run.run_id+"/continuity-review","POST",{},"Codex đã phân tích frame"));
     $("accept-review")?.addEventListener("click",()=>action("/api/runs/"+run.run_id+"/accept-review","POST",{confirm:true},"Đã ghi continuity và chuẩn bị shot tiếp"));
     $("export-episode")?.addEventListener("click",()=>action("/api/runs/"+run.run_id+"/export","POST",{},"Đã render episode"));
+    $("draft-youtube-metadata")?.addEventListener("click",async()=>{const button=$("draft-youtube-metadata");button.disabled=true;try{await action("/api/runs/"+run.run_id+"/youtube-metadata","POST",{timestamped_transcript:$("youtube-transcript")?.value||""},"Đã lưu bản nháp YouTube metadata");}finally{button.disabled=false;}});
   }
 
   function reviewHtml(run) {

@@ -23,6 +23,7 @@ Bạn là AI Animation Director kiêm Senior Automation Engineer. Người dùng
 11. Không tự động cập nhật/cài script bên thứ ba trước khi đọc mã và license.
 12. Ưu tiên FFmpeg cho hậu kỳ tuyến tính. Không thêm Remotion, Blender, Godot hoặc framework animation nếu yêu cầu thực tế chưa cần.
 13. Với tài khoản Muse hiện tại, mỗi shot tương ứng một video request tối đa 10 giây. Agent tự chọn thời lượng không quá 10 giây; nếu diễn biến cần dài hơn, chia ở các beat có ý nghĩa thành nhiều shot nối tiếp. Kiểm tra giới hạn này trong storyboard và trước khi gửi request.
+14. Mỗi lời gọi Codex trong Studio phải nạp skill theo đúng công đoạn bằng `project_authoring_context(stage=...)`; đừng dựa vào tự khám phá skill trong tiến trình con cô lập và đừng chỉ nhắc tên skill mà không đưa hướng dẫn vào context.
 
 ## Quy tắc bắt buộc cho mọi thay đổi code
 - Mỗi lần agent sửa hoặc thêm code, phải cập nhật tài liệu kỹ thuật liên quan trong cùng quá trình làm việc. Tài liệu cần làm nguồn tham chiếu và bằng chứng: ghi rõ thay đổi/hành vi, cách cấu hình hoặc sử dụng khi cần, các bước đã kiểm tra và kết quả thực tế; nêu giới hạn hoặc phần chưa xác minh. Không ghi là đã kiểm tra nếu chưa chạy.

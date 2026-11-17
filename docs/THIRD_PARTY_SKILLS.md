@@ -62,10 +62,11 @@ Theo yêu cầu mở rộng, các kỹ thuật phù hợp từ cả ba nguồn �
 
 ### Tích hợp và kiểm soát
 
-- `.agents/skills/README.md` là danh mục và bảng định tuyến; `anistudio-story-continuity` vẫn là skill router dùng chung.
-- Router hiện được nhúng vào project context của Codex web qua `project_authoring_context()`. Các nguyên tắc cốt lõi cũng được ghi trong router để các lượt structured prompt cô lập không phụ thuộc việc chúng có thể đọc các thư mục skill khác hay không.
+- `.agents/skills/README.md` là danh mục và bảng định tuyến theo từng giai đoạn; mỗi skill hoạt hình được nạp tại đúng bước storyboard, soạn prompt hoặc continuity review, còn các skill YouTube được nạp sau export theo điều kiện transcript.
+- Codex web chạy trong thư mục tạm với `--ignore-user-config`, vì vậy app không dựa vào tự động khám phá skill. `project_authoring_context(stage)` nhúng nội dung đúng skill và references vào từng structured prompt: storyboard, one-shot prompt, continuity review, YouTube metadata và chapters có điều kiện transcript.
 - Skills chuyên biệt tham chiếu `Shot`, `ShotState`, `ActionBeat`, `CameraSpec`, `ReferenceSpec`, `WorldBible`, provider config, QC report và Continuity Ledger hiện có; không tạo nguồn dữ liệu sáng tạo thứ hai.
 - Các skills chỉ hướng dẫn lập kế hoạch/review. Storyboard, budget, request gửi Muse, ghi ledger và export tiếp tục theo trạng thái/cổng duyệt của project. Không hardcode capability snapshot hoặc duration chưa được xác minh.
+- YouTube skills chỉ chạy sau export QC PASS. Title/thumbnail/SEO/chapter là bản nháp local; không có OAuth, upload hay publish. Chapters cần transcript có timestamp và được kiểm tra bởi helper trước khi Codex được yêu cầu retitle các mốc.
 - Đợt tích hợp ba bộ animation skills ở trên chỉ viết lại hướng dẫn và không copy code upstream. Tích hợp YouTube Agent Pro ở mục dưới là một thay đổi riêng: có chọn lọc helper code và giữ MIT LICENSE trong từng thư mục có nội dung được copy.
 
 ### Trạng thái xác minh

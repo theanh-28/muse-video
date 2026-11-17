@@ -61,6 +61,7 @@ from animation_studio.studio.codex import (
     project_authoring_context,
 )
 from animation_studio.studio.models import (
+    CodexPromptDraft,
     ContinuityAssessment,
     CreativePackage,
     GenerationApprovalRequest,
@@ -80,6 +81,16 @@ class StudioWorkflowError(ValueError):
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _merge_usage(*records: dict[str, int] | None) -> dict[str, int] | None:
+    totals: dict[str, int] = {}
+    for record in records:
+        for key, value in (record or {}).items():
+            if isinstance(value, int):
+                totals[key] = totals.get(key, 0) + value
+    return totals or None
+
 
 
 def _run_path(run_id: str) -> Path:
@@ -124,7 +135,7 @@ def create_run(brief: StudioBrief) -> StudioRun:
 
 
 def _build_analysis_prompt(brief: StudioBrief) -> str:
-    rules = project_authoring_context()
+    rules = project_authoring_context("storyboard")
     return f"""You are Codex acting as an animation director and senior production engineer.
 Create a production-ready DRAFT package for one new animation episode from the user's brief.
 
@@ -361,7 +372,9 @@ def _episode_file(root: Path, episode_id: str) -> Path:
     return resolve_inside(root, Path("episodes") / episode_id / "episode.yaml")
 
 
-def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, list[str], list[str]]:
+def _build_prompts(
+    root: Path, episode_id: str, shot_id: str
+) -> tuple[Episode, list[str], list[str], dict[str, int] | None]:
     episode_file = _episode_file(root, episode_id)
     episode = load_model(episode_file, Episode)
     characters_data = load_mapping(root / "assets" / "character-bible.yaml")
@@ -373,6 +386,7 @@ def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, 
     built: list[str] = []
     deferred: list[str] = []
     updated_shots: list[Shot] = []
+    prompt_usage: dict[str, int] | None = None
     requested_exists = False
 
     for shot in episode.shots:
@@ -386,6 +400,7 @@ def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, 
             continue
         previous_state: ShotState | None = None
         previous_frame: str | None = None
+        prompt_images: list[Path] = []
         references = list(shot.references)
         ready = True
         if shot.depends_on:
@@ -403,6 +418,7 @@ def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, 
                 continue
             if not frame_path.is_relative_to(root):
                 raise StudioWorkflowError("Previous last-frame reference is outside the project")
+            prompt_images.append(frame_path)
             relative_frame = frame_path.relative_to(root).as_posix()
             previous_frame = relative_frame
             if not any(ref.path == relative_frame for ref in references):
@@ -413,7 +429,7 @@ def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, 
                     media_type="image",
                 ))
         prompt_shot = shot.model_copy(update={"references": references})
-        prompt = build_shot_prompt(
+        source_prompt = build_shot_prompt(
             prompt_shot,
             episode.visual_style,
             character_bibles,
@@ -423,6 +439,35 @@ def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, 
             world_bible=world_bible,
             episode_locations=episode.locations,
         )
+        prompt_request = f"""Write the provider-facing prompt for this one approved Muse shot.
+Return only the structured output. Preserve the first two lines of the supplied source prompt
+exactly, including the requested duration and shot purpose. Do not add story facts, dialogue,
+characters, props, actions, camera moves, references, or visual claims absent from the approved
+shot, bibles, observed continuity state, or source prompt. Do not submit a generation request.
+
+APPROVED SHOT DATA:
+{prompt_shot.model_dump_json()}
+
+DETERMINISTIC SOURCE PROMPT:
+<source_prompt>
+{source_prompt}
+</source_prompt>
+
+STAGE SKILLS AND PROJECT RULES:
+{project_authoring_context("shot_prompt")}
+"""
+        prompt_draft, usage = complete_structured(
+            prompt_request,
+            CodexPromptDraft,
+            images=prompt_images or None,
+        )
+        prompt = prompt_draft.prompt.strip()
+        expected_header = "\n".join(source_prompt.splitlines()[:2])
+        if not prompt.startswith(expected_header):
+            raise StudioWorkflowError(
+                f"Codex prompt draft changed the locked format or shot header for {shot.shot_id}"
+            )
+        prompt_usage = _merge_usage(prompt_usage, usage)
         write_text(prompt_dir / f"{shot.shot_id}.prompt.txt", prompt.rstrip() + "\n", overwrite=False)
         updated_shots.append(prompt_shot.model_copy(update={"prompt": prompt}))
         built.append(shot.shot_id)
@@ -431,7 +476,7 @@ def _build_prompts(root: Path, episode_id: str, shot_id: str) -> tuple[Episode, 
         raise StudioWorkflowError(f"Shot not found: {shot_id}")
     updated_episode = episode.model_copy(update={"shots": updated_shots})
     dump_model(updated_episode, episode_file, overwrite=True)
-    return updated_episode, built, deferred
+    return updated_episode, built, deferred, prompt_usage
 
 
 def approve_creative_plan(run_id: str, *, confirm: bool) -> StudioRun:
@@ -458,13 +503,16 @@ def approve_creative_plan(run_id: str, *, confirm: bool) -> StudioRun:
     bible_path = root / "project-bible.md"
     bible = bible_path.read_text(encoding="utf-8").replace("Status: DRAFT", "Status: APPROVED", 1)
     write_text(bible_path, bible, overwrite=True)
-    updated_episode, built, deferred = _build_prompts(root, episode.episode_id, episode.shots[0].shot_id)
+    updated_episode, built, deferred, prompt_usage = _build_prompts(
+        root, episode.episode_id, episode.shots[0].shot_id
+    )
     package = run.analysis.model_copy(update={"episode": updated_episode})
     return save_run(run.model_copy(update={
         "status": "PLAN_APPROVED",
         "analysis": package,
         "deferred_shots": deferred,
         "selected_shot_id": built[0] if built else None,
+        "codex_usage": _merge_usage(run.codex_usage, prompt_usage),
         "error": None,
     }))
 
@@ -482,10 +530,13 @@ def prepare_generation(run_id: str, shot_id: str) -> StudioRun:
     if shot is None or shot.status != WorkflowStatus.APPROVED:
         raise StudioWorkflowError("Select an approved storyboard shot")
     if not shot.prompt.strip():
-        episode, built, deferred = _build_prompts(root, episode.episode_id, shot_id)
+        episode, built, deferred, prompt_usage = _build_prompts(root, episode.episode_id, shot_id)
         if not built:
             raise StudioWorkflowError(f"Prompt for {shot_id} is deferred until its predecessor is reviewed")
-        run = run.model_copy(update={"deferred_shots": deferred})
+        run = run.model_copy(update={
+            "deferred_shots": deferred,
+            "codex_usage": _merge_usage(run.codex_usage, prompt_usage),
+        })
     config = load_model(root / "project.yaml", ProjectConfig)
     ledger = load_model(episode_file.parent / "continuity-ledger.yaml", ContinuityLedger)
     by_id = {item.shot_id: item for item in episode.shots}
@@ -731,15 +782,15 @@ continuity risks. Do not edit files or generate a next-shot prompt.
 Approved storyboard end state (reference only; do not assume it was achieved):
 {shot.end_state.model_dump_json()}
 
-Continuity rules:
-{project_authoring_context()}
+Continuity and cinematic QA skills:
+{project_authoring_context("continuity_review")}
 """
     assessment, usage = complete_structured(prompt, ContinuityAssessment, images=frame_paths)
     updated = save_run(run.model_copy(update={
         "status": "REVIEW_READY",
         "continuity_assessment": assessment,
         "error": None,
-        "codex_usage": usage or run.codex_usage,
+        "codex_usage": _merge_usage(run.codex_usage, usage),
     }))
     return updated
 
@@ -785,7 +836,9 @@ def accept_continuity_review(run_id: str, *, confirm: bool) -> StudioRun:
     next_prompt = None
     deferred = []
     if next_shot:
-        updated_episode, built, deferred = _build_prompts(root, episode.episode_id, next_shot.shot_id)
+        updated_episode, built, deferred, prompt_usage = _build_prompts(
+            root, episode.episode_id, next_shot.shot_id
+        )
         if built:
             next_prompt = next(item.prompt for item in updated_episode.shots if item.shot_id == next_shot.shot_id)
     return save_run(run.model_copy(update={
@@ -794,6 +847,7 @@ def accept_continuity_review(run_id: str, *, confirm: bool) -> StudioRun:
         "next_shot_prompt": next_prompt,
         "deferred_shots": deferred,
         "selected_shot_id": next_shot.shot_id if next_prompt and next_shot else shot.shot_id,
+        "codex_usage": _merge_usage(run.codex_usage, prompt_usage),
         "manifest_path": None,
         "manifest_summary": None,
         "error": None,

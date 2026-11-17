@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from animation_studio.studio.codex import codex_executable
 from animation_studio.studio.codex import CodexBridgeError
 from animation_studio.studio.models import (
+    YouTubeMetadataRequest,
     CreativeApproval,
     GenerationApprovalRequest,
     GenerationPlanRequest,
@@ -35,6 +36,9 @@ from animation_studio.studio.service import (
     refresh_generation,
     submit_generation,
 )
+
+
+from animation_studio.studio.youtube_metadata import draft_youtube_metadata
 
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -211,6 +215,10 @@ def create_app() -> FastAPI:
     @app.post("/api/runs/{run_id}/export")
     async def export(run_id: str):
         return _public(await asyncio.to_thread(export_episode, run_id))
+
+    @app.post("/api/runs/{run_id}/youtube-metadata")
+    async def youtube_metadata(run_id: str, payload: YouTubeMetadataRequest):
+        return _public(await asyncio.to_thread(draft_youtube_metadata, run_id, payload))
 
     async def poll_until_terminal(run_id: str):
         try:

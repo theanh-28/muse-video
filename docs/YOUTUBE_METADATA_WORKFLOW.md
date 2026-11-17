@@ -1,8 +1,8 @@
 # YouTube metadata workflow
 
 This repository uses four selected Codex skills from YouTube Agent Pro to prepare metadata drafts
-for a completed animation. The workflow does not create a video, sign in to YouTube, upload,
-schedule, or change a channel.
+for a completed animation. The local Studio exposes this as an optional post-export action after
+the final MP4 passes QC. It does not sign in to YouTube, upload, schedule, or change a channel.
 
 ## Included skills
 
@@ -32,6 +32,14 @@ license at [`THIRD_PARTY_SKILLS.md`](THIRD_PARTY_SKILLS.md).
 6. Record the exact media path, duration, streams, frame inspection method, missing evidence, and
    validation results in `content-analysis.md` and `metadata-final.md`.
 
+In the Studio, choose **YouTube SEO & Metadata** from an `EXPORTED` run. The app sends first,
+middle and last still frames from the final MP4 plus the approved storyboard and observed continuity
+ledger to the selected Codex/LLM backend. It does not send the full moving video or listen to audio.
+Paste a timestamped SRT/VTT transcript to enable the chapter skill; the local helper must return
+valid candidate boundaries, and final labels/timestamps still need review against the MP4. Without
+that evidence, chapters are omitted. Each run writes a new timestamped draft directory and preserves
+previous drafts.
+
 ## Helper limitations
 
 The copied upstream helpers are small local Python utilities. `title.py` and `thumblint.py` use
@@ -60,15 +68,16 @@ For episode `EP001`, create:
 
 ```text
 projects/<project>/episodes/EP001/metadata/
-├── content-analysis.md
-├── title-options.md
-├── thumbnail-concepts.md
-├── description.md
-├── tags.txt
-├── hashtags.txt
-├── chapters.txt
-├── metadata-final.md
-└── thumbnail-prompts.md
+└── draft-<timestamp>-<id>/
+    ├── content-analysis.md
+    ├── title-options.md
+    ├── thumbnail-concepts.md
+    ├── description.md
+    ├── tags.txt
+    ├── hashtags.txt
+    ├── chapters.txt       # only when transcript boundaries validate
+    ├── metadata-final.md
+    └── thumbnail-prompts.md
 ```
 
 Keep the source MP4 and other media out of this metadata deliverable. Do not claim an upload or

@@ -19,6 +19,23 @@ audited helpers and MIT notices; none of these skills submits media or publishes
 
 Select the smallest relevant set. Drama planning sets the story intent; Muse prompting turns an approved shot into provider-facing language; cinematic QA checks the produced media. Continuity rules apply across all three.
 
+## Studio runtime stages
+
+The web Studio injects the skill instructions and referenced worksheets into the isolated Codex
+call for the matching stage. The local skills are not discovered automatically by that child process.
+
+| Runtime stage | Skills supplied to Codex | Gate / evidence |
+|---|---|---|
+| Storyboard DRAFT | `anistudio-story-continuity`, `anistudio-drama-workbench`, camera-planning section of `anistudio-cinematic-qa` | DRAFT schema and shot validation |
+| One-shot prompt | `anistudio-story-continuity`, `anistudio-muse-prompting` | Approved shot, reviewed predecessor state, displayed manifest before submit |
+| Continuity review | `anistudio-story-continuity`, `anistudio-cinematic-qa` | Actual clip frames; user confirms before ledger update |
+| YouTube metadata after export | `yt-package`, `yt-thumbnail`, `yt-seo` | QC-passed final MP4 frames; drafts only |
+| Chapters, when a transcript and valid boundaries are available | `yt-chapters`, `yt-seo` | Local chapter helper and timestamp validation; timestamps still require video review |
+
+The YouTube stage is available only after export QC passes. It never uploads or publishes. `yt` is
+a shared reference directory, and `yt-edit/deadair.py` is a helper imported by the chapter utility;
+neither is a separate standalone skill.
+
 ## Provenance
 
 The three animation skill sources are mapped in `docs/THIRD_PARTY_SKILLS.md`. The YouTube skills

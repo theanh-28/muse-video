@@ -155,17 +155,77 @@ def complete_structured(
             ) from exc
 
 
-def project_authoring_context() -> str:
-    paths = [
-        REPO_ROOT / "AGENTS.md",
-        REPO_ROOT / "docs" / "RESEARCH_NOTES.md",
-        REPO_ROOT / "docs" / "CONTINUITY_SPEC.md",
-        REPO_ROOT / "docs" / "GENERATION_SAFETY.md",
-        REPO_ROOT / "config" / "project.example.yaml",
-        REPO_ROOT / ".agents" / "skills" / "anistudio-story-continuity" / "SKILL.md",
-    ]
+_COMMON_AUTHORING_PATHS = [
+    REPO_ROOT / "AGENTS.md",
+    REPO_ROOT / "docs" / "RESEARCH_NOTES.md",
+    REPO_ROOT / "docs" / "CONTINUITY_SPEC.md",
+    REPO_ROOT / "docs" / "GENERATION_SAFETY.md",
+    REPO_ROOT / "config" / "project.example.yaml",
+]
+
+_STAGE_SKILL_SECTIONS = {
+    ("storyboard", ".agents/skills/anistudio-cinematic-qa/SKILL.md"):
+        "Camera and lighting during planning",
+}
+
+_STAGE_SKILL_PATHS = {
+    "storyboard": [
+        ".agents/skills/anistudio-story-continuity/SKILL.md",
+        ".agents/skills/anistudio-drama-workbench/SKILL.md",
+        ".agents/skills/anistudio-drama-workbench/references/shot-design-checklist.md",
+        ".agents/skills/anistudio-cinematic-qa/SKILL.md",
+    ],
+    "shot_prompt": [
+        ".agents/skills/anistudio-story-continuity/SKILL.md",
+        ".agents/skills/anistudio-muse-prompting/SKILL.md",
+        ".agents/skills/anistudio-muse-prompting/references/prompt-structure.md",
+    ],
+    "continuity_review": [
+        ".agents/skills/anistudio-story-continuity/SKILL.md",
+        ".agents/skills/anistudio-cinematic-qa/SKILL.md",
+        ".agents/skills/anistudio-cinematic-qa/references/cinematic-and-evidence-checklist.md",
+    ],
+    "youtube_metadata": [
+        ".agents/skills/yt/references/operating-guide.md",
+        ".agents/skills/yt-package/SKILL.md",
+        ".agents/skills/yt-thumbnail/SKILL.md",
+        ".agents/skills/yt-seo/SKILL.md",
+        ".agents/skills/yt-seo/references/youtube-metadata.md",
+        "config/youtube/THEANHREVIEW_PROFILE.md",
+    ],
+}
+
+
+def project_authoring_context(stage: str = "storyboard", *, include_chapters: bool = False) -> str:
+    """Load the project rules and only the skill instructions relevant to this LLM stage.
+
+    Structured Codex runs use a temporary working directory and ignore Codex config, so
+    project-local skills must be passed as prompt context instead of relying on discovery.
+    """
+    if stage not in _STAGE_SKILL_PATHS:
+        raise ValueError(f"Unknown authoring stage: {stage}")
+    skill_paths = list(_STAGE_SKILL_PATHS[stage])
+    if include_chapters and stage == "youtube_metadata":
+        skill_paths.append(".agents/skills/yt-chapters/SKILL.md")
     sections = []
-    for path in paths:
-        if path.is_file():
-            sections.append(f"## {path.relative_to(REPO_ROOT).as_posix()}\n{path.read_text(encoding='utf-8')}")
+    for path in _COMMON_AUTHORING_PATHS:
+        if not path.is_file():
+            raise CodexBridgeError(f"Required project context file is missing: {path.relative_to(REPO_ROOT).as_posix()}")
+        sections.append(f"## {path.relative_to(REPO_ROOT).as_posix()}\n{path.read_text(encoding='utf-8')}")
+    for relative in skill_paths:
+        path = REPO_ROOT / relative
+        if not path.is_file():
+            raise CodexBridgeError(f"Required project skill file is missing: {relative}")
+        content = path.read_text(encoding="utf-8")
+        section_name = _STAGE_SKILL_SECTIONS.get((stage, relative))
+        if section_name:
+            heading = f"## {section_name}"
+            lines = content.splitlines()
+            try:
+                start = lines.index(heading)
+            except ValueError as exc:
+                raise CodexBridgeError(f"Required skill section is missing: {heading} ({relative})") from exc
+            end = next((index for index in range(start + 1, len(lines)) if lines[index].startswith("## ")), len(lines))
+            content = "\n".join(lines[start:end]).strip()
+        sections.append(f"## {relative}\n{content}")
     return "\n\n".join(sections)

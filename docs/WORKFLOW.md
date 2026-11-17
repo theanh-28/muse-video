@@ -28,6 +28,8 @@ Mỗi shot phải có:
 - negative constraints và continuity locks.
 - điều kiện pass/fail QA.
 
+Sau khi storyboard được duyệt, dùng `anistudio-muse-prompting` để Codex soạn prompt một shot từ dữ liệu đã duyệt, reference và actual end state đã review. Lưu đúng nguyên văn prompt vào `episodes/<EP>/prompts/` và hiển thị trong manifest trước khi gửi.
+
 ## Phase C — Preflight
 1. Probe tính năng provider: duration, aspect ratio, reference images, continuation ID, audio, resolution.
 2. Kiểm tra assets tồn tại và filename an toàn.
@@ -50,3 +52,9 @@ Mỗi shot phải có:
 3. Ghép video; trộn voice/music/SFX; tạo phụ đề từ script hoặc alignment thực tế.
 4. Xuất MP4; kiểm tra video/audio streams, duration, black frames và audio clipping.
 5. Lưu QC report, file nguồn và manifest.
+
+## Phase F — YouTube packaging (optional, after export)
+1. Chỉ bắt đầu khi MP4 cuối có `EXPORTED` và QC `PASS`.
+2. Dùng skill `yt-package`, `yt-thumbnail` và `yt-seo` để tạo title/thumbnail pairing, concept thumbnail, description, tags và hashtag từ frame của MP4 thật cùng continuity ledger.
+3. Nếu người dùng cung cấp transcript timestamp đã khớp với MP4 và helper tìm được boundary hợp lệ, dùng thêm `yt-chapters`; nếu thiếu transcript, video dưới 30 giây hoặc boundary không hợp lệ, ghi rõ lý do bỏ chapter.
+4. Lưu các bản nháp vào `episodes/<EP>/metadata/draft-<timestamp>-<id>/`. Người dùng kiểm tra nội dung và timestamp trước khi sử dụng. App không upload hoặc publish.

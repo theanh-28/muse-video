@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+import threading
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -8,6 +11,7 @@ import yaml
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
+_WRITE_LOCK = threading.RLock()
 
 
 class StorageError(ValueError):
@@ -54,7 +58,20 @@ def dump_model(model: BaseModel, path: Path, *, overwrite: bool = True) -> Path:
 
 def write_text(path: Path, text: str, *, overwrite: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    mode = "w" if overwrite else "x"
-    with path.open(mode, encoding="utf-8", newline="\n") as stream:
-        stream.write(text)
+    with _WRITE_LOCK:
+        if not overwrite:
+            with path.open("x", encoding="utf-8", newline="\n") as stream:
+                stream.write(text)
+            return
+        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent, text=True)
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+                stream.write(text)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
 

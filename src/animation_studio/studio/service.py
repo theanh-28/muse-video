@@ -224,7 +224,7 @@ def _append_script_revision(run: StudioRun, package: ScriptPackage) -> StudioRun
         content_hash=content_hash(package.model_dump(mode="json")),
         status=ArtifactStatus.DRAFT,
     )
-    workflow = run.workflow.append_revision(artifact)
+    workflow = run.workflow.stale_dependents(artifact_id).append_revision(artifact)
     workflow = workflow.transition(StudioRunStatus.SCRIPT_REVIEW)
     return save_run(run.model_copy(update={
         "status": StudioRunStatus.SCRIPT_REVIEW,
@@ -235,7 +235,9 @@ def _append_script_revision(run: StudioRun, package: ScriptPackage) -> StudioRun
     }))
 
 
-def generate_script_run(run_id: str, *, feedback: str = "") -> StudioRun:
+def generate_script_run(
+    run_id: str, *, feedback: str = "", expected_revision: int | None = None, expected_content_hash: str | None = None
+) -> StudioRun:
     """Generate a script DRAFT; never builds a storyboard or calls a media provider."""
     run = get_run(run_id)
     if run.workflow.status not in {StudioRunStatus.BRIEF_RECEIVED, StudioRunStatus.SCRIPT_REVIEW}:
@@ -244,7 +246,15 @@ def generate_script_run(run_id: str, *, feedback: str = "") -> StudioRun:
     save_run(run.model_copy(update={"status": StudioRunStatus.SCRIPT_GENERATING, "workflow": generating, "error": None}))
     try:
         package, usage = complete_structured(_script_prompt(run.brief, feedback), ScriptPackage)
-        updated = _append_script_revision(get_run(run_id), package)
+        with _run_lock(run_id):
+            current = get_run(run_id)
+            current_artifact = current.workflow.current("script")
+            if expected_revision is not None and (
+                current_artifact is None or current_artifact.revision != expected_revision
+                or current_artifact.content_hash != expected_content_hash
+            ):
+                raise StudioWorkflowError("Script revision changed; reload before requesting feedback")
+            updated = _append_script_revision(current, package)
         return save_run(updated.model_copy(update={"codex_usage": _merge_usage(updated.codex_usage, usage)}))
     except (CodexBridgeError, StudioWorkflowError, ValidationError, OSError) as exc:
         failed = get_run(run_id)
@@ -255,30 +265,28 @@ def generate_script_run(run_id: str, *, feedback: str = "") -> StudioRun:
         }))
 
 
-def revise_script(run_id: str, package: ScriptPackage) -> StudioRun:
+def revise_script(run_id: str, package: ScriptPackage, *, expected_revision: int, expected_content_hash: str) -> StudioRun:
     with _run_lock(run_id):
         run = get_run(run_id)
         if run.workflow.status != StudioRunStatus.SCRIPT_REVIEW:
             raise StudioWorkflowError("A script can only be edited while it is in review")
+        current = run.workflow.current("script")
+        if current is None or current.revision != expected_revision or current.content_hash != expected_content_hash:
+            raise StudioWorkflowError("Script revision changed; reload before saving")
         return _append_script_revision(run, package)
 
 
-def approve_script(run_id: str, *, approved_by: str) -> StudioRun:
+def approve_script(run_id: str, *, approved_by: str, expected_revision: int, expected_content_hash: str) -> StudioRun:
     with _run_lock(run_id):
         run = get_run(run_id)
         if run.workflow.status != StudioRunStatus.SCRIPT_REVIEW or not run.script_revisions:
             raise StudioWorkflowError("No script draft is available for approval")
-        artifact = run.workflow.current("script")
-        if artifact is None or artifact.status != ArtifactStatus.DRAFT:
-            raise StudioWorkflowError("The current script revision is not eligible for approval")
-        approved = artifact.model_copy(update={
-            "status": ArtifactStatus.APPROVED,
-            "approval": ApprovalRecord(status=ApprovalStatus.APPROVED, approved_by=approved_by,
-                                       approved_at=_utcnow(), artifact_hash=artifact.content_hash),
-        })
-        revisions = dict(run.workflow.artifacts)
-        revisions["script"] = [*revisions["script"][:-1], approved]
-        workflow = run.workflow.model_copy(update={"artifacts": revisions}).transition(StudioRunStatus.SCRIPT_APPROVED)
+        try:
+            workflow = run.workflow.approve_current(
+                "script", expected_revision=expected_revision, expected_hash=expected_content_hash, approved_by=approved_by
+            ).transition(StudioRunStatus.SCRIPT_APPROVED)
+        except ValueError as exc:
+            raise StudioWorkflowError(str(exc)) from exc
         return save_run(run.model_copy(update={
             "status": StudioRunStatus.SCRIPT_APPROVED,
             "workflow": workflow,

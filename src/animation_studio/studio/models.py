@@ -168,12 +168,24 @@ class ScriptApprovalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     approved_by: str = Field(min_length=1, max_length=120)
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
 
 
 class ScriptFeedbackRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     feedback: str = Field(min_length=1, max_length=4000)
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
+
+
+class ScriptEditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    script: ScriptPackage
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
 
 
 class GenerationPlanRequest(BaseModel):

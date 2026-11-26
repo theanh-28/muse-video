@@ -105,11 +105,15 @@ class ApprovalRecord(StrictModel):
     approved_by: str | None = None
     approved_at: datetime | None = None
     artifact_hash: str | None = None
+    artifact_id: str | None = None
+    revision: int | None = None
 
     @model_validator(mode="after")
     def approved_record_is_complete(self) -> "ApprovalRecord":
-        if self.status == ApprovalStatus.APPROVED and not (self.approved_by and self.approved_at and self.artifact_hash):
-            raise ValueError("approved records require approver, timestamp, and artifact hash")
+        if self.status == ApprovalStatus.APPROVED and not (
+            self.approved_by and self.approved_at and self.artifact_hash and self.artifact_id and self.revision
+        ):
+            raise ValueError("approved records require approver, artifact ID, revision, timestamp, and artifact hash")
         return self
 
 
@@ -157,4 +161,26 @@ class WorkflowState(StrictModel):
             current = revisions[-1] if revisions else None
             if current and dependency_id in current.depends_on and current.status == ArtifactStatus.APPROVED:
                 revisions[-1] = current.model_copy(update={"status": ArtifactStatus.STALE})
+        return self.model_copy(update={"artifacts": artifacts})
+
+    def approve_current(
+        self, artifact_id: str, *, expected_revision: int, expected_hash: str, approved_by: str
+    ) -> "WorkflowState":
+        """Approve exactly the revision the client reviewed; reject stale tabs."""
+        current = self.current(artifact_id)
+        if current is None:
+            raise ValueError(f"artifact does not exist: {artifact_id}")
+        if current.status != ArtifactStatus.DRAFT:
+            raise ValueError("only a current DRAFT artifact can be approved")
+        if current.revision != expected_revision or current.content_hash != expected_hash:
+            raise ValueError("artifact revision changed; reload before approving")
+        approved = current.model_copy(update={
+            "status": ArtifactStatus.APPROVED,
+            "approval": ApprovalRecord(
+                status=ApprovalStatus.APPROVED, approved_by=approved_by, approved_at=utcnow(),
+                artifact_hash=current.content_hash, artifact_id=artifact_id, revision=current.revision,
+            ),
+        })
+        artifacts = dict(self.artifacts)
+        artifacts[artifact_id] = [*artifacts[artifact_id][:-1], approved]
         return self.model_copy(update={"artifacts": artifacts})

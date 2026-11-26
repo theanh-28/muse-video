@@ -20,6 +20,7 @@ from animation_studio.studio.models import (
     StudioBrief,
     ScriptApprovalRequest,
     ScriptFeedbackRequest,
+    ScriptEditRequest,
     ContinuityReviewAcceptRequest,
     YouTubeMetadataRequest,
 )
@@ -192,16 +193,25 @@ def create_app() -> FastAPI:
         return _public(await asyncio.to_thread(approve_creative_plan, run_id, confirm=payload.confirm))
 
     @app.put("/api/runs/{run_id}/script")
-    async def edit_script(run_id: str, package: ScriptPackage):
-        return _public(await asyncio.to_thread(revise_script, run_id, package))
+    async def edit_script(run_id: str, payload: ScriptEditRequest):
+        return _public(await asyncio.to_thread(
+            revise_script, run_id, payload.script, expected_revision=payload.expected_revision,
+            expected_content_hash=payload.expected_content_hash
+        ))
 
     @app.post("/api/runs/{run_id}/script/revise")
     async def revise_script_with_feedback(run_id: str, payload: ScriptFeedbackRequest):
-        return _public(await asyncio.to_thread(generate_script_run, run_id, feedback=payload.feedback))
+        return _public(await asyncio.to_thread(
+            generate_script_run, run_id, feedback=payload.feedback,
+            expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
+        ))
 
     @app.post("/api/runs/{run_id}/approve-script")
     async def approve_script_revision(run_id: str, payload: ScriptApprovalRequest):
-        return _public(await asyncio.to_thread(approve_script, run_id, approved_by=payload.approved_by))
+        return _public(await asyncio.to_thread(
+            approve_script, run_id, approved_by=payload.approved_by,
+            expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
+        ))
 
     @app.post("/api/runs/{run_id}/manifest")
     async def make_manifest(run_id: str, payload: GenerationPlanRequest):

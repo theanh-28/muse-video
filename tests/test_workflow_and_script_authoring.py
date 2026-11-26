@@ -65,13 +65,32 @@ def test_script_revision_and_approval_are_persisted_without_overwrite(tmp_path, 
     monkeypatch.setattr(service, "complete_structured", lambda _prompt, _model: (_script(), {"input_tokens": 1}))
     drafted = service.generate_script_run(run.run_id)
     assert drafted.status == StudioRunStatus.SCRIPT_REVIEW
-    revised = service.revise_script(run.run_id, _script("I found your letter."))
+    current = drafted.workflow.current("script")
+    revised = service.revise_script(
+        run.run_id, _script("I found your letter."), expected_revision=current.revision,
+        expected_content_hash=current.content_hash,
+    )
     assert len(revised.script_revisions) == 2
     assert revised.workflow.artifacts["script"][0].status == ArtifactStatus.SUPERSEDED
-    approved = service.approve_script(run.run_id, approved_by="reviewer")
+    current = revised.workflow.current("script")
+    approved = service.approve_script(
+        run.run_id, approved_by="reviewer", expected_revision=current.revision, expected_content_hash=current.content_hash
+    )
     assert approved.status == StudioRunStatus.SCRIPT_APPROVED
     assert approved.workflow.current("script").approval.artifact_hash
     restored = service.get_run(run.run_id)
     assert restored.approved_script_revision == 2
     with pytest.raises(service.StudioWorkflowError):
-        service.approve_script(run.run_id, approved_by="reviewer")
+        service.approve_script(
+            run.run_id, approved_by="reviewer", expected_revision=current.revision, expected_content_hash=current.content_hash
+        )
+
+
+def test_stale_script_client_cannot_save_or_approve(tmp_path, monkeypatch):
+    monkeypatch.setattr(service, "RUNS_DIR", tmp_path / "runs")
+    monkeypatch.setattr(service, "complete_structured", lambda _prompt, _model: (_script(), None))
+    run = service.generate_script_run(service.create_run(StudioBrief(brief="A fox returns a lost letter to its owner.")).run_id)
+    stale = run.workflow.current("script")
+    service.revise_script(run.run_id, _script("A newer script."), expected_revision=stale.revision, expected_content_hash=stale.content_hash)
+    with pytest.raises(service.StudioWorkflowError, match="changed"):
+        service.approve_script(run.run_id, approved_by="reviewer", expected_revision=stale.revision, expected_content_hash=stale.content_hash)

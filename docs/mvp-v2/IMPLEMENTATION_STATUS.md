@@ -3,7 +3,7 @@
 | Milestone | Status | Evidence | Notes |
 |---|---|---|---|
 | M0 baseline audit | DONE | `00-baseline-audit.md` | FFmpeg tools unavailable locally |
-| M1 workflow/versioning | PARTIAL | `core/workflow.py`, storage atomics, tests | Foundation complete; full artifact/dependency coverage is deferred with M3–M7 |
+| M1-R workflow hardening | DONE | `10-foundation-review.md`, stale-client tests | Expected revision/hash contract added; cross-process lock remains deferred |
 | M2 script authoring | PARTIAL | `studio/scripts.py`, service/API tests | Backend split is implemented; Screen 2 UI and live structured-output verification are deferred |
 | M3–M9 | NOT_STARTED | Directive scope | No live provider calls made |
 

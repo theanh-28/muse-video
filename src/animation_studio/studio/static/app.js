@@ -44,7 +44,7 @@
   async function loadHealth() {
     try {
       const data = await api("/api/health");
-      const codex = $("codex-health"); codex.classList.toggle("ok",data.codex_available);codex.classList.toggle("bad",!data.codex_available);codex.querySelector("b").textContent=data.codex_available?"Sẵn sàng":"Chưa cài / chưa có PATH";
+      const codex = $("codex-health"); codex.querySelector("span").textContent="Codex"; codex.title=data.llm_backend||"Configure OPENAI_API_KEY or GEMINI_API_KEY for API fallback"; codex.classList.toggle("ok",data.codex_available);codex.classList.toggle("bad",!data.codex_available);codex.querySelector("b").textContent=data.codex_available?(data.llm_backend || "Sẵn sàng"):"Chưa sẵn sàng";
       const gateway = $("gateway-health"); const connected=!!data.gateway.connected;gateway.classList.toggle("ok",connected);gateway.classList.toggle("bad",!connected);gateway.querySelector("b").textContent=connected?"Đã kết nối":"Chưa kết nối";
       gateway.title=connected?(data.gateway.models||[]).join(", "):data.gateway.detail||"";
     } catch (_) { $("codex-health").classList.add("bad");$("gateway-health").classList.add("bad"); }
@@ -96,6 +96,20 @@
     return `<div class="media-box"><video controls preload="metadata" src="${masterUrl}"></video><div class="media-meta"><span>Gốc ${esc(meta.width)}×${esc(meta.height)} · ${esc(meta.fps)}fps</span><span>${esc(meta.duration_seconds)}s</span><span>H.264 / AAC</span><span>QC master: ${esc(check)}</span><a href="${sourceUrl}" target="_blank">Video gốc</a></div></div>${run.conformed_media_path?`<div class="notice">Bản xem phía trên đã conform theo profile xuất. Nếu nguồn Muse có độ phân giải thấp hơn, upscale không tạo thêm chi tiết.</div>`:""}${run.qc_report?`<div class="manifest-grid">${Object.entries(qc).map(([k,v])=>`<div class="metric"><small>${esc(k.replaceAll('_',' '))}</small><strong>${v?"PASS":"WARN"}</strong></div>`).join("")}</div>`:""}<div class="frames">${["first","middle","last"].map((x)=>`<figure><img loading="lazy" src="/api/runs/${encodeURIComponent(run.run_id)}/frame/${x}" alt="${x} frame"><figcaption>${x.toUpperCase()} FRAME</figcaption></figure>`).join("")}</div>`;
   }
 
+  function autopilotHtml(run) {
+    if (!run.brief?.autopilot) return "";
+    const labels={analyzing:"Planning storyboard",approving_storyboard:"Approving storyboard",preparing_manifest:"Preparing shot manifest",submitting_to_muse:"Submitting to Muse",polling_muse:"Generating video",extracting_frames_and_qc:"Extracting frames and running QC",reviewing_continuity:"Reviewing continuity",rendering_episode:"Rendering MP4",completed:"Complete",export_qc_warn:"Exported; final QC needs review",failed:"Stopped after an error"};
+    const plannedCount=Number(run.autopilot_shot_count||run.analysis?.episode?.shots?.length||0);
+    const count=Math.max(1,plannedCount);
+    const index=Math.max(0,Number(run.autopilot_shot_index||0));
+    const stage=run.autopilot_stage||"analyzing";
+    const fraction={analyzing:0.03,approving_storyboard:0.08,preparing_manifest:0.12,submitting_to_muse:0.2,polling_muse:0.48,extracting_frames_and_qc:0.72,reviewing_continuity:0.9,rendering_episode:0.96,completed:1,export_qc_warn:1,failed:Math.max(0.08,index/count)}[stage]??0.05;
+    const percent=Math.round(Math.max(4,Math.min(100,((Math.max(0,index-1)+fraction)/count)*100)));
+    const shot=run.autopilot_current_shot ? " ? "+esc(run.autopilot_current_shot) : "";
+    const progressText=plannedCount?'Shot '+Math.min(index||1,count)+'/'+count:'Codex is choosing the shot count';
+    return '<section class="autopilot-box"><div class="autopilot-head"><strong>ONE-PROMPT AUTO-PILOT</strong><span>'+esc(labels[stage]||stage)+shot+'</span></div><div class="progress-track"><div class="progress-fill" style="width:'+percent+'%"></div></div><small>'+progressText+' - '+percent+'%</small></section>';
+  }
+
   function renderRun(run, quiet=false) {
     const view=$("run-view"); const p=run.analysis; const hasPlan=!!p;
     $("page-title").textContent=p?.project_title||run.brief.title_hint||"Đang tạo dự án";
@@ -119,7 +133,7 @@
       body=`<div class="media-box"><video controls preload="metadata" src="/api/runs/${encodeURIComponent(run.run_id)}/video/export"></video></div><div class="success-box">Episode đã render: ${esc(run.export_path)} · QC ${esc(run.qc_report?.status)}</div>${metadataPanel}`;
     }
     if(run.status==="FAILED") body=`${hasPlan?planHtml(run):""}<div class="alert">${esc(run.error||"Codex hoặc provider báo lỗi.")}</div><div class="notice">Generation lỗi sẽ không tự gửi lại. Kiểm tra manifest, task record và gateway trước khi bắt đầu một request mới.</div>`;
-    view.innerHTML=header+(run.error&&run.status!=="FAILED"?`<div class="alert">${esc(run.error)}</div>`:"")+body;
+    view.innerHTML=header+autopilotHtml(run)+(run.error&&run.status!=="FAILED"?`<div class="alert">${esc(run.error)}</div>`:"")+body;
     if(run.status==="DRAFT_READY") $("approve-plan")?.addEventListener("click",()=>action("/api/runs/"+run.run_id+"/approve-plan","POST",{confirm:true},"Đã duyệt storyboard"));
     if(["PLAN_APPROVED","REVIEWED"].includes(run.status) && run.next_shot_prompt!==null || run.status==="PLAN_APPROVED") {
       $("make-manifest")?.addEventListener("click",()=>action("/api/runs/"+run.run_id+"/manifest","POST",{shot_id:$("shot-select")?.value||run.selected_shot_id},"Đã tạo manifest DRAFT"));
@@ -141,7 +155,7 @@
 
   async function refreshRun(quiet=false) {
     if(!activeRunId) return;
-    try { const run=await api(`/api/runs/${encodeURIComponent(activeRunId)}`);renderRun(run,quiet);await loadRuns(); }
+    try { const run=await api(`/api/runs/${encodeURIComponent(activeRunId)}`);renderRun(run,quiet);await loadRuns();if(["EXPORTED","EXPORT_QC_WARN","FAILED"].includes(run.status)&&timer){clearInterval(timer);timer=null;} }
     catch(error) { if(!quiet) toast(error.message,true); }
   }
 
@@ -155,14 +169,14 @@
     const form=new FormData(event.currentTarget);
     const payload=Object.fromEntries(form.entries());
     payload.episode_duration_seconds=Number(payload.episode_duration_seconds);
-    const button=$("analyze-button");button.disabled=true;button.innerHTML='<span class="spinner"></span> Đang gửi Codex…';
+    const button=$("analyze-button");button.disabled=true;button.innerHTML='<span class="spinner"></span> Đang tạo bản nháp…';
     try {
       const run=await api("/api/runs","POST",payload);activeRunId=run.run_id;
       $("new-view").classList.add("hidden");$("run-view").classList.remove("hidden");
       renderRun(run);await loadRuns();
       if(timer)clearInterval(timer);timer=setInterval(()=>refreshRun(true),2500);
     } catch(error) { toast(error.message,true); }
-    finally { button.disabled=false;button.textContent="✦ Gửi Codex phân tích"; }
+    finally { button.disabled=false;button.textContent="Tạo bản nháp"; }
   });
 
   $("new-run").addEventListener("click",()=>{

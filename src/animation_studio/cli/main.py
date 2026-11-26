@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import getpass
 import hashlib
 import json
@@ -933,7 +934,35 @@ def web_studio(
     typer.echo("Local-only server. Press Ctrl+C to stop.")
     if open_browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
-    uvicorn.run(create_app(), host="127.0.0.1", port=port, log_level="info")
+    uvicorn.run(create_app(), host=os.getenv("ANISTUDIO_HOST", "127.0.0.1"), port=port, log_level="info")
+
+
+@app.command("auto")
+def auto_produce(
+    brief: str = typer.Argument(..., help="One production brief for a complete animation episode"),
+    duration: int = typer.Option(30, "--duration", min=1, max=180, help="Target episode duration in seconds"),
+) -> None:
+    """Create, generate, review, QC and export an episode from one brief."""
+    if len(brief.strip()) < 20:
+        _fail("The production brief must contain at least 20 characters")
+    try:
+        from animation_studio.studio.models import StudioBrief
+        from animation_studio.studio.service import create_run, get_run, run_autopilot
+
+        run = create_run(StudioBrief(
+            brief=brief,
+            episode_duration_seconds=duration,
+            autopilot=True,
+        ))
+        typer.echo(f"Auto-Pilot run: {run.run_id} · Codex will choose shot count · {duration}s target")
+        completed = asyncio.run(run_autopilot(run.run_id))
+        completed = get_run(completed.run_id)
+    except Exception as exc:
+        _fail(f"Auto-Pilot could not start: {exc}")
+    if completed.status != "EXPORTED":
+        _fail(f"Auto-Pilot stopped at {completed.status}: {completed.error or completed.autopilot_stage or 'see run record'}")
+    typer.echo(f"Exported: {completed.export_path}")
+    typer.echo(f"Final QC: {completed.qc_report.get('status') if completed.qc_report else 'missing'}")
 
 
 if __name__ == "__main__":

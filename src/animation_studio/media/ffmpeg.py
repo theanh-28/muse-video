@@ -186,7 +186,7 @@ def build_render_command(
     video_filter = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,fps={fps}"
     command.extend([
         "-vf", video_filter,
-        "-c:v", video_codec, "-pix_fmt", "yuv420p",
+        "-c:v", video_codec, "-preset", "fast", "-threads", "4", "-pix_fmt", "yuv420p",
         "-c:a", audio_codec,
     ])
     if subtitle_index is not None:

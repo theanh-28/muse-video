@@ -13,16 +13,17 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from animation_studio.studio.codex import codex_executable
 from animation_studio.studio.codex import CodexBridgeError
 from animation_studio.studio.models import (
-    YouTubeMetadataRequest,
     CreativeApproval,
     GenerationApprovalRequest,
     GenerationPlanRequest,
     GenerationSubmitRequest,
     StudioBrief,
     ContinuityReviewAcceptRequest,
+    YouTubeMetadataRequest,
 )
 from animation_studio.studio.service import (
     STUDIO_PROJECTS_DIR,
+    SUBMIT_LOCK,
     accept_continuity_review,
     analyze_continuity,
     analyze_run,
@@ -35,11 +36,31 @@ from animation_studio.studio.service import (
     prepare_generation,
     refresh_generation,
     submit_generation,
+    run_autopilot,
 )
-
-
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
+from animation_studio.providers.muse2api import is_gateway_host_allowed
 
+
+def _load_dotenv_if_present() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    env_file = repo_root / ".env"
+    if env_file.is_file():
+        try:
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip().strip("'\"")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+            if "MUSE2API_KEY" in os.environ and "MUSE2API_API_KEY" not in os.environ:
+                os.environ["MUSE2API_API_KEY"] = os.environ["MUSE2API_KEY"]
+        except Exception:
+            pass
+
+
+_load_dotenv_if_present()
 
 STATIC_DIR = Path(__file__).parent / "static"
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -53,8 +74,8 @@ def _gateway_status() -> dict[str, object]:
     base_url = os.getenv("MUSE2API_BASE_URL", "http://127.0.0.1:18610/v1").rstrip("/")
     key = os.getenv("MUSE2API_API_KEY") or os.getenv("MUSE2API_KEY")
     parsed = urlsplit(base_url)
-    if parsed.hostname not in LOOPBACK_HOSTS:
-        return {"connected": False, "detail": "Gateway must use a loopback URL"}
+    if not is_gateway_host_allowed(parsed.hostname):
+        return {"connected": False, "detail": "Gateway must use a loopback or explicitly allowed container-network URL"}
     if not key:
         return {"connected": False, "detail": "Set MUSE2API_API_KEY in the PowerShell session"}
     try:
@@ -79,7 +100,6 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Muse Animation Studio", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.session_token = secrets.token_urlsafe(32)
     app.state.poll_tasks = {}
-    app.state.submit_lock = asyncio.Lock()
 
     @app.middleware("http")
     async def local_only_and_csrf(request: Request, call_next):
@@ -123,8 +143,16 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     async def health():
+        backend_available = codex_executable() is not None or bool(
+            os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
+        )
         return {
-            "codex_available": codex_executable() is not None,
+            "codex_available": backend_available,
+            "llm_backend": "Codex CLI" if codex_executable() else (
+                "OpenAI API" if os.getenv("OPENAI_API_KEY", "").strip() else (
+                    "Gemini API" if os.getenv("GEMINI_API_KEY", "").strip() else None
+                )
+            ),
             "gateway": await asyncio.to_thread(_gateway_status),
             "studio_projects": str(STUDIO_PROJECTS_DIR),
         }
@@ -143,6 +171,8 @@ def create_app() -> FastAPI:
 
     @app.post("/api/runs")
     async def start_run(brief: StudioBrief, background_tasks: BackgroundTasks):
+        if brief.autopilot:
+            raise HTTPException(status_code=422, detail="Hãy tạo bản nháp và duyệt kế hoạch trước khi sản xuất.")
         run = create_run(brief)
         background_tasks.add_task(analyze_run, run.run_id)
         return _public(run)
@@ -166,7 +196,7 @@ def create_app() -> FastAPI:
     @app.post("/api/runs/{run_id}/submit")
     async def submit(run_id: str, payload: GenerationSubmitRequest):
         # Serialize submit clicks so a double click cannot create duplicate Muse tasks.
-        async with app.state.submit_lock:
+        async with SUBMIT_LOCK:
             run = await asyncio.to_thread(submit_generation, run_id, payload.confirmation)
         task = asyncio.create_task(poll_until_terminal(run_id))
         app.state.poll_tasks[run_id] = task

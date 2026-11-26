@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import shutil
+import tempfile
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -70,9 +72,11 @@ from animation_studio.studio.models import (
 )
 
 
+REPO_ROOT = Path(os.getenv("ANISTUDIO_HOME", REPO_ROOT)).resolve()
 RUNS_DIR = REPO_ROOT / "data" / "studio" / "runs"
 STUDIO_PROJECTS_DIR = REPO_ROOT / "projects" / "studio"
 POLL_LOCK = asyncio.Lock()
+SUBMIT_LOCK = asyncio.Lock()
 
 
 class StudioWorkflowError(ValueError):
@@ -92,7 +96,6 @@ def _merge_usage(*records: dict[str, int] | None) -> dict[str, int] | None:
     return totals or None
 
 
-
 def _run_path(run_id: str) -> Path:
     if not re.fullmatch(r"[a-f0-9]{12}", run_id):
         raise StudioWorkflowError("Invalid studio run ID")
@@ -104,6 +107,25 @@ def save_run(run: StudioRun) -> StudioRun:
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     dump_model(updated, _run_path(updated.run_id), overwrite=True)
     return updated
+
+
+def _set_autopilot_progress(
+    run_id: str,
+    stage: str,
+    *,
+    current_shot: str | None = None,
+    shot_index: int | None = None,
+    shot_count: int | None = None,
+) -> StudioRun:
+    run = get_run(run_id)
+    changes: dict[str, object] = {"autopilot_stage": stage}
+    if current_shot is not None:
+        changes["autopilot_current_shot"] = current_shot
+    if shot_index is not None:
+        changes["autopilot_shot_index"] = shot_index
+    if shot_count is not None:
+        changes["autopilot_shot_count"] = shot_count
+    return save_run(run.model_copy(update=changes))
 
 
 def get_run(run_id: str) -> StudioRun:
@@ -130,7 +152,13 @@ def list_runs(limit: int = 30) -> list[StudioRun]:
 
 
 def create_run(brief: StudioBrief) -> StudioRun:
-    run = StudioRun(run_id=uuid4().hex[:12], status="ANALYZING", brief=brief)
+    run = StudioRun(
+        run_id=uuid4().hex[:12],
+        status="ANALYZING",
+        brief=brief,
+        autopilot_stage="analyzing" if brief.autopilot else None,
+        autopilot_shot_count=0,
+    )
     return save_run(run)
 
 
@@ -271,7 +299,6 @@ def _write_draft_project(run: StudioRun, package: CreativePackage) -> Path:
 
     aspect = run.brief.aspect_ratio
     dimensions = {"16:9": (1920, 1080), "9:16": (1080, 1920), "1:1": (1080, 1080)}[aspect]
-    provider_verified = run.brief.provider_mode == "muse2api_experimental"
     config = ProjectConfig(
         project={
             "id": project_id,
@@ -302,13 +329,13 @@ def _write_draft_project(run: StudioRun, package: CreativePackage) -> Path:
         ),
         provider=ProviderSettings(
             mode=run.brief.provider_mode,
-            base_url="http://127.0.0.1:18610/v1",
+            base_url=os.getenv("MUSE2API_BASE_URL", "http://127.0.0.1:18610/v1"),
             api_key_env="MUSE2API_API_KEY",
-            verified_for_submission=provider_verified,
+            verified_for_submission=False,
         ),
     )
 
-    stage = Path(shutil.mkdtemp(prefix=f".{project_id}-", dir=projects_root)).resolve()
+    stage = Path(tempfile.mkdtemp(prefix=f".{project_id}-", dir=projects_root)).resolve()
     try:
         (stage / "assets").mkdir()
         episode_dir = stage / "episodes" / package.episode.episode_id
@@ -517,7 +544,7 @@ def approve_creative_plan(run_id: str, *, confirm: bool) -> StudioRun:
     }))
 
 
-def prepare_generation(run_id: str, shot_id: str) -> StudioRun:
+def prepare_generation(run_id: str, shot_id: str, *, smoke_test: bool | None = None) -> StudioRun:
     run = get_run(run_id)
     if run.status not in {"PLAN_APPROVED", "REVIEWED", "MEDIA_READY", "QC_WARN", "FAILED"}:
         raise StudioWorkflowError("Approve the creative plan and review the previous shot before planning generation")
@@ -538,12 +565,16 @@ def prepare_generation(run_id: str, shot_id: str) -> StudioRun:
             "codex_usage": _merge_usage(run.codex_usage, prompt_usage),
         })
     config = load_model(root / "project.yaml", ProjectConfig)
+    if smoke_test is None:
+        smoke_test = not config.provider.verified_for_submission
     ledger = load_model(episode_file.parent / "continuity-ledger.yaml", ContinuityLedger)
     by_id = {item.shot_id: item for item in episode.shots}
     try:
         for dependency_id in shot.depends_on:
             can_advance(by_id[dependency_id], shot, ledger)
         manifest = build_manifest(episode, config, selected_shot_id=shot_id)
+        if smoke_test:
+            manifest = manifest.model_copy(update={"smoke_test": True})
     except (ContinuityError, ManifestError) as exc:
         raise StudioWorkflowError(str(exc)) from exc
     if len(manifest.requests) != 1:
@@ -691,6 +722,10 @@ def refresh_generation(run_id: str) -> StudioRun:
 
 
 def _postprocess_generated(run: StudioRun, job: ShotJob) -> StudioRun:
+    if run.brief.autopilot:
+        run = _set_autopilot_progress(
+            run.run_id, "extracting_frames_and_qc", current_shot=job.shot_id
+        )
     root = _project_root(run)
     if not job.output_path:
         return save_run(run.model_copy(update={"status": "FAILED", "error": "Generated job has no output path"}))
@@ -737,6 +772,13 @@ def _postprocess_generated(run: StudioRun, job: ShotJob) -> StudioRun:
             expected_height=config.output.target_height,
             expected_fps=config.output.target_fps,
         )
+        if (
+            final_qc["status"] == "PASS"
+            and not config.provider.verified_for_submission
+            and job.provider_mode == "muse2api_experimental"
+        ):
+            verified_provider = config.provider.model_copy(update={"verified_for_submission": True})
+            dump_model(config.model_copy(update={"provider": verified_provider}), root / "project.yaml", overwrite=True)
         report_dir = root / config.paths.output_dir / "qc"
         report_dir.mkdir(parents=True, exist_ok=True)
         stamp = _utcnow().strftime("%Y%m%dT%H%M%SZ")
@@ -892,3 +934,126 @@ def export_episode(run_id: str) -> StudioRun:
         "qc_report": report,
         "error": None,
     }))
+
+
+async def run_autopilot(run_id: str) -> StudioRun:
+    """Run a single sequential episode, stopping on provider or QC errors without retries."""
+    try:
+        run = await asyncio.to_thread(analyze_run, run_id)
+        if run.status != "DRAFT_READY" or not run.analysis:
+            return run
+        shots = sorted(run.analysis.episode.shots, key=lambda item: item.order)
+        count = len(shots)
+        await asyncio.to_thread(_set_autopilot_progress, run_id, "approving_storyboard", shot_count=count)
+        run = await asyncio.to_thread(approve_creative_plan, run_id, confirm=True)
+
+        for index, shot in enumerate(shots, start=1):
+            await asyncio.to_thread(
+                _set_autopilot_progress,
+                run_id,
+                "preparing_manifest",
+                current_shot=shot.shot_id,
+                shot_index=index,
+                shot_count=count,
+            )
+            project_root = _project_root(run)
+            project_config = load_model(project_root / "project.yaml", ProjectConfig)
+            is_initial_smoke_test = index == 1 and not project_config.provider.verified_for_submission
+            run = await asyncio.to_thread(
+                prepare_generation,
+                run_id,
+                shot.shot_id,
+                smoke_test=is_initial_smoke_test,
+            )
+            if not run.manifest_summary:
+                raise StudioWorkflowError(f"Manifest summary is missing for {shot.shot_id}")
+
+            duration = run.manifest_summary.get("duration_seconds", shot.planned_duration_seconds)
+            approval = GenerationApprovalRequest(
+                usage_estimate=(
+                    f"One Muse video submission for {shot.shot_id}, planned for {duration} seconds; "
+                    f"{count} sequential submissions total. Muse2API does not provide a price quote."
+                ),
+                budget_limit=(
+                    f"At most {count} submissions for this episode, one active request at a time, "
+                    "no automatic retries; stop on provider or QC errors."
+                ),
+                approved_by="One-Prompt Auto-Pilot policy",
+            )
+            await asyncio.to_thread(approve_generation, run_id, approval)
+            manifest_id = str(run.manifest_summary["manifest_id"])
+            await asyncio.to_thread(
+                _set_autopilot_progress,
+                run_id,
+                "submitting_to_muse",
+                current_shot=shot.shot_id,
+                shot_index=index,
+                shot_count=count,
+            )
+            async with SUBMIT_LOCK:
+                run = await asyncio.to_thread(submit_generation, run_id, f"SEND {manifest_id}")
+
+            for _ in range(360):
+                run = await asyncio.to_thread(
+                    _set_autopilot_progress,
+                    run_id,
+                    "polling_muse",
+                    current_shot=shot.shot_id,
+                    shot_index=index,
+                    shot_count=count,
+                )
+                run = await asyncio.to_thread(refresh_generation, run_id)
+                if run.status in {"SUBMITTED", "RUNNING"}:
+                    await asyncio.sleep(5)
+                    continue
+                break
+            else:
+                raise StudioWorkflowError(
+                    f"Muse task polling exceeded 30 minutes for {shot.shot_id}; no resubmission was attempted"
+                )
+
+            if run.status != "MEDIA_READY":
+                raise StudioWorkflowError(
+                    run.error or f"{shot.shot_id} did not pass download, frame extraction and QC ({run.status})"
+                )
+            await asyncio.to_thread(
+                _set_autopilot_progress,
+                run_id,
+                "reviewing_continuity",
+                current_shot=shot.shot_id,
+                shot_index=index,
+                shot_count=count,
+            )
+            run = await asyncio.to_thread(analyze_continuity, run_id)
+            run = await asyncio.to_thread(accept_continuity_review, run_id, confirm=True)
+
+        await asyncio.to_thread(
+            _set_autopilot_progress,
+            run_id,
+            "rendering_episode",
+            current_shot=None,
+            shot_index=count,
+            shot_count=count,
+        )
+        run = await asyncio.to_thread(export_episode, run_id)
+        return await asyncio.to_thread(
+            _set_autopilot_progress,
+            run_id,
+            "completed" if run.status == "EXPORTED" else "export_qc_warn",
+            shot_index=count,
+            shot_count=count,
+        )
+    except Exception as exc:
+        try:
+            run = get_run(run_id)
+            if run.status not in {"EXPORTED", "EXPORT_QC_WARN"}:
+                return save_run(run.model_copy(update={
+                    "status": "FAILED",
+                    "autopilot_stage": "failed",
+                    "error": str(exc)[:2200],
+                }))
+            return save_run(run.model_copy(update={
+                "autopilot_stage": "export_qc_warn" if run.status == "EXPORT_QC_WARN" else "completed",
+            }))
+        except Exception:
+            raise

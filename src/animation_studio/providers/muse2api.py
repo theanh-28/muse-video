@@ -36,6 +36,27 @@ def _is_loopback(host: str | None) -> bool:
         return False
 
 
+def is_gateway_host_allowed(host: str | None) -> bool:
+    """Allow loopback and explicitly configured Docker service addresses."""
+    if _is_loopback(host):
+        return True
+    if not host:
+        return False
+    normalized = host.rstrip(".").lower()
+    allow_container = os.getenv("MUSE2API_ALLOW_CONTAINER_NETWORK", "").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+    if normalized == "muse2api":
+        return True
+    if not allow_container:
+        return False
+    try:
+        address = ipaddress.ip_address(normalized)
+        return address.is_private and not address.is_loopback and not address.is_link_local
+    except ValueError:
+        return normalized.endswith((".internal", ".docker"))
+
+
 class Muse2ApiProvider:
     """Experimental adapter for the local, unofficial Muse2API gateway.
 
@@ -54,8 +75,8 @@ class Muse2ApiProvider:
         max_result_bytes: int = MAX_RESULT_BYTES,
     ) -> None:
         parsed = urlsplit(base_url.rstrip("/"))
-        if parsed.scheme not in {"http", "https"} or not _is_loopback(parsed.hostname):
-            raise ProviderNotReady("Muse2API must use a loopback-only HTTP(S) base URL")
+        if parsed.scheme not in {"http", "https"} or not is_gateway_host_allowed(parsed.hostname):
+            raise ProviderNotReady("Muse2API must use a loopback-only or explicitly allowed container-network URL")
         if not parsed.path.rstrip("/").endswith("/v1"):
             raise ProviderNotReady("Muse2API base URL must end with /v1")
         self.base_url = base_url.rstrip("/")

@@ -88,13 +88,14 @@ def test_autopilot_true_rejected_before_work(draft_setup):
     assert not (tmp_path / "runs").exists()
 
 
-@pytest.mark.parametrize("mode", ["missing", "autopilot"])
-def test_saved_run_read_does_not_start_work(draft_setup, mode):
+@pytest.mark.parametrize("mode,duration", [("missing", 12), ("autopilot", 1), ("autopilot", 19)])
+def test_saved_run_read_does_not_start_work(draft_setup, mode, duration):
     client, calls, _, tmp_path = draft_setup
     run = StudioRun(run_id="abcdef123456", status="SUBMITTED",
                     brief=StudioBrief(brief="A harbor keeper notices a lantern fading and restores its light."),
                     task_id="TASK-OLD")
     record = run.model_dump(mode="json")
+    record["brief"]["episode_duration_seconds"] = duration
     if mode == "missing":
         record["brief"].pop("autopilot")
     else:
@@ -108,10 +109,25 @@ def test_saved_run_read_does_not_start_work(draft_setup, mode):
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "SUBMITTED"
     assert response.json()["task_id"] == "TASK-OLD"
+    assert response.json()["brief"]["episode_duration_seconds"] == duration
     if mode == "autopilot":
         assert response.json()["autopilot_stage"] == "polling_muse"
         assert response.json()["autopilot_shot_index"] == 3
     assert calls == {"llm": 0, "approve": 0, "budget": 0, "send": 0}
+
+
+def test_new_short_run_is_rejected_before_work(draft_setup):
+    client, calls, _, tmp_path = draft_setup
+    payload = {"brief": "A harbor keeper notices a lantern fading and restores its light.",
+               "episode_duration_seconds": 12}
+    response = client.post("/api/runs", json=payload)
+    assert response.status_code == 422
+    assert not (tmp_path / "runs").exists()
+    assert calls == {"llm": 0, "approve": 0, "budget": 0, "send": 0}
+    payload["episode_duration_seconds"] = 20
+    accepted = client.post("/api/runs", json=payload)
+    assert accepted.status_code == 200, accepted.text
+    assert calls["llm"] == 1
 
 
 def test_studio_manual_submit_gates_and_sends_once(draft_setup, monkeypatch):

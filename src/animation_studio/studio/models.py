@@ -25,7 +25,7 @@ class StudioBrief(BaseModel):
     genre: str = Field(default="Hoạt hình ngắn", max_length=240)
     visual_style: str = Field(default="", max_length=500)
     language: str = Field(default="vi-VN", min_length=2, max_length=20)
-    episode_duration_seconds: int = Field(default=30, ge=20, le=180)
+    episode_duration_seconds: int = Field(default=30, ge=1, le=180)
     aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
     provider_mode: Literal["muse2api_experimental"] = "muse2api_experimental"
     autopilot: bool = False
@@ -37,6 +37,12 @@ class StudioBrief(BaseModel):
             value = dict(value)
             value.pop("shot_count")
         return value
+
+
+class CreateStudioBrief(StudioBrief):
+    """Validation contract for new runs; stored briefs retain historical durations."""
+
+    episode_duration_seconds: int = Field(default=30, ge=20, le=180)
 
 
 class CharacterIdentityFact(BaseModel):

@@ -19,6 +19,7 @@ from animation_studio.studio.models import (
     GenerationPlanRequest,
     GenerationSubmitRequest,
     StudioBrief,
+    CreateStudioBrief,
     ContinuityReviewAcceptRequest,
 )
 from animation_studio.studio.service import (
@@ -142,7 +143,7 @@ def create_app() -> FastAPI:
         ]
 
     @app.post("/api/runs")
-    async def start_run(brief: StudioBrief, background_tasks: BackgroundTasks):
+    async def start_run(brief: CreateStudioBrief, background_tasks: BackgroundTasks):
         if brief.autopilot:
             raise HTTPException(status_code=422, detail="Hãy tạo bản nháp và duyệt kế hoạch trước khi sản xuất.")
         run = create_run(brief)

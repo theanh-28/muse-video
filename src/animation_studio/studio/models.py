@@ -14,6 +14,8 @@ from animation_studio.core.models import (
     ShotState,
     WorldBible,
 )
+from animation_studio.core.workflow import WorkflowState
+from animation_studio.studio.scripts import ScriptPackage
 
 
 class StudioBrief(BaseModel):
@@ -24,9 +26,9 @@ class StudioBrief(BaseModel):
     audience: str = Field(default="Gia đình", max_length=240)
     genre: str = Field(default="Hoạt hình ngắn", max_length=240)
     visual_style: str = Field(default="", max_length=500)
-    language: str = Field(default="vi-VN", min_length=2, max_length=20)
-    episode_duration_seconds: int = Field(default=30, ge=1, le=180)
-    aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
+    language: str = Field(default="en", min_length=2, max_length=20)
+    episode_duration_seconds: int = Field(default=35, ge=5, le=180)
+    aspect_ratio: Literal["16:9", "9:16", "1:1"] = "9:16"
     provider_mode: Literal["muse2api_experimental"] = "muse2api_experimental"
     autopilot: bool = False
 
@@ -162,6 +164,18 @@ class CreativeApproval(BaseModel):
     confirm: bool
 
 
+class ScriptApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    approved_by: str = Field(min_length=1, max_length=120)
+
+
+class ScriptFeedbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    feedback: str = Field(min_length=1, max_length=4000)
+
+
 class GenerationPlanRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -196,6 +210,9 @@ class StudioRun(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     brief: StudioBrief
+    workflow: WorkflowState = Field(default_factory=WorkflowState)
+    script_revisions: list[ScriptPackage] = Field(default_factory=list)
+    approved_script_revision: int | None = None
     analysis: CreativePackage | None = None
     project_dir: str | None = None
     deferred_shots: list[str] = Field(default_factory=list)

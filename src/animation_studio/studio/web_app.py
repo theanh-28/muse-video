@@ -18,6 +18,8 @@ from animation_studio.studio.models import (
     GenerationPlanRequest,
     GenerationSubmitRequest,
     StudioBrief,
+    ScriptApprovalRequest,
+    ScriptFeedbackRequest,
     ContinuityReviewAcceptRequest,
     YouTubeMetadataRequest,
 )
@@ -27,6 +29,7 @@ from animation_studio.studio.service import (
     accept_continuity_review,
     analyze_continuity,
     analyze_run,
+    generate_script_run,
     approve_creative_plan,
     approve_generation,
     create_run,
@@ -37,7 +40,10 @@ from animation_studio.studio.service import (
     refresh_generation,
     submit_generation,
     run_autopilot,
+    approve_script,
+    revise_script,
 )
+from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
 from animation_studio.providers.muse2api import is_gateway_host_allowed
 
@@ -184,6 +190,18 @@ def create_app() -> FastAPI:
     @app.post("/api/runs/{run_id}/approve-plan")
     async def approve_plan(run_id: str, payload: CreativeApproval):
         return _public(await asyncio.to_thread(approve_creative_plan, run_id, confirm=payload.confirm))
+
+    @app.put("/api/runs/{run_id}/script")
+    async def edit_script(run_id: str, package: ScriptPackage):
+        return _public(await asyncio.to_thread(revise_script, run_id, package))
+
+    @app.post("/api/runs/{run_id}/script/revise")
+    async def revise_script_with_feedback(run_id: str, payload: ScriptFeedbackRequest):
+        return _public(await asyncio.to_thread(generate_script_run, run_id, feedback=payload.feedback))
+
+    @app.post("/api/runs/{run_id}/approve-script")
+    async def approve_script_revision(run_id: str, payload: ScriptApprovalRequest):
+        return _public(await asyncio.to_thread(approve_script, run_id, approved_by=payload.approved_by))
 
     @app.post("/api/runs/{run_id}/manifest")
     async def make_manifest(run_id: str, payload: GenerationPlanRequest):

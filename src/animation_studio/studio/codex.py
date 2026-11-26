@@ -337,6 +337,10 @@ _STAGE_SKILL_SECTIONS = {
 }
 
 _STAGE_SKILL_PATHS = {
+    "script": [
+        ".agents/skills/anistudio-story-continuity/SKILL.md",
+        ".agents/skills/anistudio-drama-workbench/SKILL.md",
+    ],
     "storyboard": [
         ".agents/skills/anistudio-story-continuity/SKILL.md",
         ".agents/skills/anistudio-drama-workbench/SKILL.md",

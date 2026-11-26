@@ -11,11 +11,20 @@ __pycache__/
 Thumbs.db
 # Never commit browser profiles, cookies, sessions or downloaded private media.
 data/
+.worktrees/
+/test_tmp*/
+projects/studio/
+runtime/muse2api/data/
+runtime/muse2api/.env
+runtime/muse2api/.git/
 sessions/
 profiles/
 *.cookie
 *cookie*.json
 *session*.json
+accounts.json
+tasks.json
+*accounts*.json
 # Generated project media can be large/private; keep unless intentionally versioned.
 projects/*/clips/
 projects/*/episodes/*/clips/

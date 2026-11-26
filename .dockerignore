@@ -1,0 +1,13 @@
+.git/
+.worktrees/
+test_tmp*/
+.env
+.env.*
+!.env.example
+data/
+projects/
+runtime/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/

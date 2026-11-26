@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import pytest
-import httpx
+
+httpx = pytest.importorskip("httpx", reason="Provider HTTP tests require the optional http dependency")
 
 from animation_studio.core.models import ReferenceSpec
 from animation_studio.providers.base import ProviderNotReady, VideoRequest

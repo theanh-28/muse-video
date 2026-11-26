@@ -1,6 +1,10 @@
 import json
 
 import pytest
+
+pytest.importorskip("fastapi", reason="Studio web tests require the optional web dependencies")
+pytest.importorskip("httpx", reason="Studio web tests require the optional web dependencies")
+
 from fastapi.testclient import TestClient
 
 from animation_studio.core.models import Episode, JobQueue, LocationBible, ProjectConfig, ShotJob, JobStatus, WorkflowStatus, WorldBible

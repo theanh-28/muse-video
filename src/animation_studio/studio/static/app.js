@@ -155,14 +155,14 @@
     const form=new FormData(event.currentTarget);
     const payload=Object.fromEntries(form.entries());
     payload.episode_duration_seconds=Number(payload.episode_duration_seconds);
-    const button=$("analyze-button");button.disabled=true;button.innerHTML='<span class="spinner"></span> Đang gửi Codex…';
+    const button=$("analyze-button");button.disabled=true;button.innerHTML='<span class="spinner"></span> Đang tạo bản nháp…';
     try {
       const run=await api("/api/runs","POST",payload);activeRunId=run.run_id;
       $("new-view").classList.add("hidden");$("run-view").classList.remove("hidden");
       renderRun(run);await loadRuns();
       if(timer)clearInterval(timer);timer=setInterval(()=>refreshRun(true),2500);
     } catch(error) { toast(error.message,true); }
-    finally { button.disabled=false;button.textContent="✦ Gửi Codex phân tích"; }
+    finally { button.disabled=false;button.textContent="Tạo bản nháp"; }
   });
 
   $("new-run").addEventListener("click",()=>{

@@ -4,6 +4,7 @@ import asyncio
 import json
 import re
 import shutil
+import tempfile
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -308,7 +309,7 @@ def _write_draft_project(run: StudioRun, package: CreativePackage) -> Path:
         ),
     )
 
-    stage = Path(shutil.mkdtemp(prefix=f".{project_id}-", dir=projects_root)).resolve()
+    stage = Path(tempfile.mkdtemp(prefix=f".{project_id}-", dir=projects_root)).resolve()
     try:
         (stage / "assets").mkdir()
         episode_dir = stage / "episodes" / package.episode.episode_id

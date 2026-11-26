@@ -28,6 +28,7 @@ class StudioBrief(BaseModel):
     episode_duration_seconds: int = Field(default=30, ge=20, le=180)
     aspect_ratio: Literal["16:9", "9:16", "1:1"] = "16:9"
     provider_mode: Literal["muse2api_experimental"] = "muse2api_experimental"
+    autopilot: bool = False
 
     @model_validator(mode="before")
     @classmethod
@@ -213,6 +214,10 @@ class StudioRun(BaseModel):
     next_shot_prompt: str | None = None
     error: str | None = None
     codex_usage: dict[str, int] | None = None
+    autopilot_stage: str | None = None
+    autopilot_current_shot: str | None = None
+    autopilot_shot_index: int = 0
+    autopilot_shot_count: int = 0
 
     youtube_metadata_dir: str | None = None
     youtube_metadata_summary: dict[str, object] | None = None

@@ -172,7 +172,7 @@ def _replace_attempt(run: StudioRun, attempt_id: str, **updates: object) -> Stud
     if len(matches) != 1:
         raise GenerationSafetyError("generation attempt record is inconsistent")
     current = matches[0]
-    if current.status not in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_UNKNOWN}:
+    if current.status not in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_UNKNOWN, ProviderJobState.RUNNING}:
         raise GenerationSafetyError("generation attempt cannot change submission state")
     updated = current.model_copy(update=updates)
     return run.model_copy(update={

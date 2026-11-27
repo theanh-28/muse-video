@@ -444,7 +444,8 @@ def submit_appearance_candidate(run_id: str, *, attempt_id: str, provider: Muse2
     """Submit an already-persisted image intent exactly once."""
     with _run_lock(run_id):
         run = get_run(run_id)
-        attempt = appearance_service.attempt_for_submission(run, attempt_id)
+        claimed, attempt = appearance_service.claim_candidate_submission(run, attempt_id=attempt_id)
+        save_run(claimed)
     try:
         task = provider.submit_image(ImageRequest(
             prompt=attempt.prompt, model=str(attempt.parameters.get("model", "muse-image")),

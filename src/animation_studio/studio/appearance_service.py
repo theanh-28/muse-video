@@ -132,6 +132,17 @@ def attempt_for_submission(run: StudioRun, attempt_id: str):
     return attempt
 
 
+def claim_candidate_submission(run: StudioRun, *, attempt_id: str) -> tuple[StudioRun, object]:
+    attempt = attempt_for_submission(run, attempt_id)
+    # The immutable approval fields on the attempt are rechecked against the
+    # current scope before a provider can see the request.
+    approval = next((item for item in run.asset_generation_approvals if item.approval_id == attempt.approval_id), None)
+    if approval is None or (approval.target_revision, approval.target_content_hash, approval.operation_type) != (attempt.target_revision, attempt.target_content_hash, attempt.operation_type):
+        raise AppearanceError("generation scope no longer matches the persisted attempt")
+    claimed = [item.model_copy(update={"status": ProviderJobState.RUNNING}) if item.attempt_id == attempt_id else item for item in run.asset_generation_attempts]
+    return run.model_copy(update={"asset_generation_attempts": claimed}), attempt
+
+
 def complete_candidate_from_file(run: StudioRun, *, attempt_id: str, source: Path, assets_root: Path) -> StudioRun:
     attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
     if attempt is None or attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:

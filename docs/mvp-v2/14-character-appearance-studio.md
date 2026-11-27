@@ -23,3 +23,5 @@ The service now submits an existing persisted intent with that attempt ID as the
 Submit and refresh endpoints now use an injected mock provider in tests or a submission-disabled Muse adapter by default. Completed candidate bytes are served only from the run-contained appearance directory after path validation.
 
 The Appearance screen now renders validated completed-image previews, task state/errors, persisted submit/refresh actions, completed-only selection, and final reference approval. Browser interaction remains unverified; JavaScript syntax and backend regression tests passed.
+
+Before submission, the service now atomically claims the persisted intent under the run lock and revalidates its exact scope identity. A second click sees the claimed state and cannot issue another POST.

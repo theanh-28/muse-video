@@ -28,6 +28,7 @@ from animation_studio.studio.models import (
     AppearanceSelectionRequest,
     AppearanceReferenceApprovalRequest,
     AppearanceAttemptRequest,
+    AppearanceEditRequest,
 )
 from animation_studio.studio.service import (
     RUNS_DIR,
@@ -51,6 +52,7 @@ from animation_studio.studio.service import (
     revise_script,
     prepare_appearance,
     approve_appearance_specification,
+    edit_appearance_specification,
     approve_appearance_generation,
     prepare_appearance_candidates,
     select_appearance_candidate,
@@ -158,7 +160,7 @@ def create_app() -> FastAPI:
 
     @app.get("/assets/{asset_name}")
     async def assets(asset_name: str):
-        if asset_name not in {"app.js", "app.css", "script-studio.js", "appearance-studio.js"}:
+        if asset_name not in {"app.js", "app.css", "script-studio.js", "appearance-studio.js", "voice-studio.js"}:
             raise HTTPException(status_code=404)
         path = STATIC_DIR / asset_name
         return FileResponse(path)
@@ -243,6 +245,14 @@ def create_app() -> FastAPI:
             approve_appearance_specification, run_id, character_id=payload.character_id,
             expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
             approved_by=payload.approved_by,
+        ))
+
+    @app.put("/api/runs/{run_id}/appearance/specification")
+    async def edit_appearance_spec(run_id: str, payload: AppearanceEditRequest):
+        return _public(await asyncio.to_thread(
+            edit_appearance_specification, run_id, character_id=payload.character_id,
+            expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
+            description=payload.description, locked_attributes=payload.locked_attributes,
         ))
 
     @app.post("/api/runs/{run_id}/appearance/generation/approve")

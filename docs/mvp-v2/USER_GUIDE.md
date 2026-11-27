@@ -9,3 +9,7 @@ The Script Studio view presents script fields, dialogue, revision history, feedb
 If initial script authoring fails before any script exists, use the explicit retry action on the same run. It does not create a new run or automatically retry an AI request.
 
 Refresh is safe: runs persist under `data/studio/runs`. Do not edit persisted JSON manually. A failed Codex draft remains `FAILED` with a user-actionable error and no provider media request.
+
+## Appearance preparation update (Directive 005, partial)
+
+After script approval, Appearance preparation may be opened. Each main character's specification can be edited only against the revision/hash currently shown; saving creates a new draft revision and preserves prior candidates as history. Before an image request can be sent, approve the exact displayed scope. Changing its prompt, parameters, provider, or reference bytes requires a new approval. This local feature does not yet make Voice Studio or final asset approval available.

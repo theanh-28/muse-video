@@ -29,3 +29,9 @@ Before submission, the service now atomically claims the persisted intent under 
 Final reference approval now re-hashes the stored run-contained image and validates PNG dimensions or JPEG termination before accepting its persisted hash.
 
 The offline two-character fixture verifies that two independently approved scopes reserve exactly six image intents and cannot exceed either three-request limit.
+
+## Revision-safe editing and decoding update (2026-11-27)
+
+`PUT /api/runs/{run_id}/appearance/specification` requires the reviewed character ID, revision, and hash. The service appends a DRAFT revision, stores the replaced specification and candidates in `appearance_spec_history`, and stales dependent references; it never mutates an approved spec in place. Preparing appearance now transitions both `run.status` and `workflow.status` to `ASSET_PREPARATION` in the same saved update.
+
+Final reference approval rehashes the run-contained file and fully decodes PNG, JPEG, WEBP, or GIF through Pillow before approval. Header-shaped/truncated bytes, zero dimensions, and unreasonable decoded sizes are rejected. Pillow is now an explicit project dependency.

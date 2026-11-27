@@ -409,6 +409,17 @@ def approve_appearance_specification(
         ))
 
 
+def edit_appearance_specification(
+    run_id: str, *, character_id: str, expected_revision: int, expected_content_hash: str,
+    description: str, locked_attributes: list[str],
+) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(appearance_service.edit_appearance_spec(
+            get_run(run_id), character_id=character_id, expected_revision=expected_revision,
+            expected_hash=expected_content_hash, description=description, locked_attributes=locked_attributes,
+        ))
+
+
 def approve_appearance_generation(
     run_id: str, *, character_id: str, expected_revision: int, expected_content_hash: str,
     request_limit: int, approved_by: str,

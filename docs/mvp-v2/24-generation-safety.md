@@ -21,3 +21,9 @@ The safety helpers in `studio/generation_safety.py` reserve a request, reject st
 ## Limitations
 
 The primitives do not submit a live request themselves. Character Appearance must save each returned run under its mutation transaction before calling the opt-in Muse adapter. Provider credits remain `UNKNOWN` unless a provider supplies trustworthy evidence. This is local-machine advisory locking, not distributed coordination.
+
+## Scope binding update (2026-11-27)
+
+New approvals persist a canonical SHA-256 request scope containing provider, exact prompt, parameters, and reference-byte hashes. Historical approvals without this scope remain readable but cannot authorize another provider POST. Before POST, `claim_asset_attempt()` rechecks the exact current target/dependencies, request fingerprint, request limit, and reference bytes, then persists `SUBMISSION_CLAIMED` under the run lock. An unresolved result blocks overlapping scopes for the logical target, even for parallel image candidates. Restart recovery turns unsubmitted or claimed intents into `SUBMISSION_UNKNOWN`; it never sends a new request.
+
+Verification: `uv run pytest -q tests/test_generation_safety.py tests/test_appearance_workflow.py tests/test_workflow_and_script_authoring.py` passed 15 deterministic tests on 2026-11-27. No provider or external AI call was made.

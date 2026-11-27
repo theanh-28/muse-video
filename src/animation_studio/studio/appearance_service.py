@@ -9,7 +9,7 @@ from uuid import uuid4
 from animation_studio.core.workflow import ArtifactDependency, ArtifactRevision, ArtifactStatus, StudioRunStatus, content_hash
 from animation_studio.core.workflow import ProviderJobState
 from animation_studio.studio.generation_safety import (
-    approve_asset_generation, begin_asset_attempt, file_content_hash, mark_submission_unknown, record_provider_task,
+    approve_asset_generation, begin_asset_attempt, claim_asset_attempt, file_content_hash, mark_submission_unknown, record_provider_task,
 )
 from animation_studio.studio.models import AppearanceCandidate, AppearanceSpec, StudioRun
 
@@ -19,7 +19,7 @@ class AppearanceError(ValueError):
 
 
 def _script_identity(run: StudioRun) -> tuple[int, str]:
-    if run.workflow.status != StudioRunStatus.SCRIPT_APPROVED or run.approved_script_revision is None:
+    if run.workflow.status not in {StudioRunStatus.SCRIPT_APPROVED, StudioRunStatus.ASSET_PREPARATION, StudioRunStatus.ASSET_REVIEW} or run.approved_script_revision is None:
         raise AppearanceError("approve the current script before preparing character appearance")
     artifact = run.workflow.current("script")
     if artifact is None or artifact.status != ArtifactStatus.APPROVED:
@@ -54,6 +54,7 @@ def prepare_appearance_specs(run: StudioRun) -> StudioRun:
             depends_on=[ArtifactDependency(artifact_id="script", revision=script_revision, content_hash=script_hash)],
         ))
         specs.append(spec)
+    workflow = workflow.transition(StudioRunStatus.ASSET_PREPARATION)
     return run.model_copy(update={"workflow": workflow, "appearance_specs": specs, "status": StudioRunStatus.ASSET_PREPARATION})
 
 
@@ -63,6 +64,38 @@ def approve_appearance_spec(run: StudioRun, *, character_id: str, expected_revis
         artifact_id, expected_revision=expected_revision, expected_hash=expected_hash, approved_by=approved_by
     )
     return run.model_copy(update={"workflow": workflow})
+
+
+def edit_appearance_spec(
+    run: StudioRun, *, character_id: str, expected_revision: int, expected_hash: str,
+    description: str, locked_attributes: list[str],
+) -> StudioRun:
+    """Append a revision while retaining the old spec and its candidates as history."""
+    spec = next((item for item in run.appearance_specs if item.character_id == character_id), None)
+    artifact_id = f"appearance:{character_id}"
+    current = run.workflow.current(artifact_id)
+    if spec is None or current is None:
+        raise AppearanceError("appearance specification does not exist")
+    if (current.revision, current.content_hash) != (expected_revision, expected_hash):
+        raise AppearanceError("appearance specification changed; reload before editing")
+    if current.status not in {ArtifactStatus.DRAFT, ArtifactStatus.APPROVED}:
+        raise AppearanceError("only a current draft or approved appearance specification can be revised")
+    script_revision, script_hash = _script_identity(run)
+    revised = AppearanceSpec(
+        character_id=spec.character_id, character_name=spec.character_name,
+        source_script_revision=script_revision, source_script_hash=script_hash,
+        revision=spec.revision + 1, description=description, locked_attributes=locked_attributes,
+    )
+    workflow = run.workflow.stale_dependents(artifact_id).append_revision(ArtifactRevision(
+        artifact_id=artifact_id, revision=current.revision + 1,
+        content_hash=content_hash(revised.model_dump(mode="json")),
+        depends_on=[ArtifactDependency(artifact_id="script", revision=script_revision, content_hash=script_hash)],
+    ))
+    return run.model_copy(update={
+        "workflow": workflow,
+        "appearance_specs": [revised if item.character_id == character_id else item for item in run.appearance_specs],
+        "appearance_spec_history": [*run.appearance_spec_history, spec],
+    })
 
 
 def prepare_candidate_attempts(run: StudioRun, *, character_id: str, approval_id: str, count: int = 3) -> StudioRun:
@@ -91,6 +124,9 @@ def prepare_candidate_attempts(run: StudioRun, *, character_id: str, approval_id
 
 
 def approve_generation_scope(run: StudioRun, *, character_id: str, expected_revision: int, expected_hash: str, request_limit: int, approved_by: str) -> StudioRun:
+    spec = next((item for item in run.appearance_specs if item.character_id == character_id), None)
+    if spec is None:
+        raise AppearanceError("appearance specification does not exist")
     return approve_asset_generation(
         run,
         operation_type="IMAGE",
@@ -100,6 +136,9 @@ def approve_generation_scope(run: StudioRun, *, character_id: str, expected_revi
         request_limit=request_limit,
         approved_by=approved_by,
         usage_basis="Each Muse image candidate is one request; provider credits are UNKNOWN.",
+        provider="muse2api_experimental",
+        prompt=spec.description,
+        parameters={"model": "muse-image", "count": 1},
     )
 
 
@@ -133,14 +172,10 @@ def attempt_for_submission(run: StudioRun, attempt_id: str):
 
 
 def claim_candidate_submission(run: StudioRun, *, attempt_id: str) -> tuple[StudioRun, object]:
-    attempt = attempt_for_submission(run, attempt_id)
-    # The immutable approval fields on the attempt are rechecked against the
-    # current scope before a provider can see the request.
-    approval = next((item for item in run.asset_generation_approvals if item.approval_id == attempt.approval_id), None)
-    if approval is None or (approval.target_revision, approval.target_content_hash, approval.operation_type) != (attempt.target_revision, attempt.target_content_hash, attempt.operation_type):
-        raise AppearanceError("generation scope no longer matches the persisted attempt")
-    claimed = [item.model_copy(update={"status": ProviderJobState.RUNNING}) if item.attempt_id == attempt_id else item for item in run.asset_generation_attempts]
-    return run.model_copy(update={"asset_generation_attempts": claimed}), attempt
+    try:
+        return claim_asset_attempt(run, attempt_id=attempt_id)
+    except ValueError as exc:
+        raise AppearanceError(str(exc)) from exc
 
 
 def complete_candidate_from_file(run: StudioRun, *, attempt_id: str, source: Path, assets_root: Path) -> StudioRun:
@@ -189,14 +224,21 @@ def approve_selected_candidate(run: StudioRun, *, character_id: str, expected_ha
 
 
 def _validate_decodable_image(path: Path) -> None:
-    data = path.read_bytes()
-    if data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24 and data[12:16] == b"IHDR":
-        width, height = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
-        if width > 0 and height > 0:
-            return
-    if data.startswith(b"\xff\xd8\xff") and b"\xff\xd9" in data[-64:]:
-        return
-    raise AppearanceError("selected candidate image cannot be decoded")
+    try:
+        from PIL import Image, UnidentifiedImageError
+    except ImportError as exc:  # pragma: no cover - installation is validated by packaging
+        raise AppearanceError("Pillow is required to validate downloaded candidate images") from exc
+    try:
+        with Image.open(path) as image:
+            image.verify()
+        with Image.open(path) as image:
+            width, height = image.size
+            if image.format not in {"PNG", "JPEG", "WEBP", "GIF"} or width <= 0 or height <= 0:
+                raise AppearanceError("downloaded candidate has unsupported format or dimensions")
+            if width * height > 100_000_000 or path.stat().st_size > 40 * 1024 * 1024:
+                raise AppearanceError("downloaded candidate image is unreasonably large")
+    except (OSError, UnidentifiedImageError) as exc:
+        raise AppearanceError("selected candidate image cannot be completely decoded") from exc
 
 
 def _update_candidate_for_attempt(run: StudioRun, attempt_id: str, **updates: object) -> StudioRun:

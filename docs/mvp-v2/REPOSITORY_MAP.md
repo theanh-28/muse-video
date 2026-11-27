@@ -47,3 +47,7 @@ Run records reside under `data/studio/runs` at runtime and are ignored because t
 ## Setup
 
 Install Python 3.11+, uv, and FFmpeg/ffprobe for media features. Run `uv sync --locked --extra http --extra web --extra test`, then use the CLI command above or `uv run python -m animation_studio.cli.main web`. Configure local secrets only through ignored environment files or environment variables; see `README_VI.md`, `docs/MUSE2API_DEPLOYMENT.md`, and `docs/GENERATION_SAFETY.md`.
+
+## Directive 005 additions
+
+`studio/appearance_service.py` now owns revision-safe appearance edits and complete candidate image decoding. `studio/generation_safety.py` owns canonical request scope fingerprints and the durable pre-POST `SUBMISSION_CLAIMED` transition. `studio/service.py` persists those operations under its existing per-run lock, and `studio/web_app.py` exposes the appearance edit endpoint. Pillow is a direct dependency used only for local image validation.

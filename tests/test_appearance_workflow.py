@@ -72,7 +72,8 @@ def test_completed_image_can_be_selected_and_approved_as_immutable_reference(tmp
     attempt = run.asset_generation_attempts[0]
     run = appearance_service.record_submitted_candidate(run, attempt_id=attempt.attempt_id, provider_task_id="mock-task")
     source = tmp_path / "mock.png"
-    source.write_bytes(b"\x89PNG\r\n\x1a\n" + b"synthetic image")
+    from PIL import Image
+    Image.new("RGB", (2, 2), "red").save(source, format="PNG")
     run = appearance_service.complete_candidate_from_file(run, attempt_id=attempt.attempt_id, source=source, assets_root=tmp_path / "assets")
     candidate = run.appearance_specs[0].candidates[0]
     selected = appearance_service.select_candidate(run, character_id="FOX", candidate_id=candidate.candidate_id)
@@ -117,3 +118,22 @@ def test_two_character_six_intent_scopes_preserve_request_limits(tmp_path, monke
         run=service.prepare_appearance_candidates(run.run_id,character_id=character_id,approval_id=approval.approval_id,count=3)
     assert len(run.asset_generation_attempts)==6
     assert all(item.reserved_requests==3 for item in run.asset_generation_approvals)
+
+
+def test_editing_appearance_appends_revision_and_preserves_candidate_history(tmp_path, monkeypatch):
+    monkeypatch.setattr(service, "RUNS_DIR", tmp_path / "runs")
+    package = _script(); monkeypatch.setattr(service, "complete_structured", lambda _p, _m: (package, None))
+    run = service.generate_script_run(service.create_run(StudioBrief(brief="A fox returns a lost letter to its owner today.")).run_id)
+    script = run.workflow.current("script")
+    run = service.approve_script(run.run_id, approved_by="r", expected_revision=script.revision, expected_content_hash=script.content_hash)
+    run = service.prepare_appearance(run.run_id)
+    artifact = run.workflow.current("appearance:FOX")
+    revised = service.edit_appearance_specification(
+        run.run_id, character_id="FOX", expected_revision=artifact.revision,
+        expected_content_hash=artifact.content_hash, description="A small orange fox with a blue coat.",
+        locked_attributes=["orange fur", "blue coat"],
+    )
+    current = revised.workflow.current("appearance:FOX")
+    assert current.revision == 2 and current.status == "DRAFT"
+    assert revised.appearance_specs[0].revision == 2
+    assert revised.appearance_spec_history[0].revision == 1

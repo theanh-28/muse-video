@@ -44,6 +44,9 @@ def _approved_scope(run: StudioRun) -> StudioRun:
         request_limit=1,
         approved_by="reviewer",
         usage_basis="One image task; provider credit data is UNKNOWN.",
+        provider="muse2api",
+        prompt="portrait",
+        parameters={"model": "muse-image"},
     )
 
 
@@ -52,27 +55,22 @@ def test_attempt_is_reserved_before_submission_and_request_limit_is_enforced(tmp
     reference = tmp_path / "reference.png"
     reference.write_bytes(b"approved image bytes")
     expected_hash = content_hash({"wrong": "algorithm"})
-    # Use a real byte hash: an incorrect reference is rejected before reservation.
+    # Scope changes are rejected before an intent is reserved.
     with pytest.raises(GenerationSafetyError, match="reference bytes changed"):
         begin_asset_attempt(
             run,
             approval_id=run.asset_generation_approvals[0].approval_id,
             prompt="portrait",
-            parameters={},
+            parameters={"model": "muse-image"},
             provider="muse2api",
             reference_hashes={reference: expected_hash},
         )
 
     import hashlib
 
-    run = begin_asset_attempt(
-        run,
-        approval_id=run.asset_generation_approvals[0].approval_id,
-        prompt="portrait",
-        parameters={"model": "muse-image"},
-        provider="muse2api",
-        reference_hashes={reference: hashlib.sha256(reference.read_bytes()).hexdigest()},
-    )
+    # This approval intentionally has no reference, so the request must match it.
+    run = begin_asset_attempt(run, approval_id=run.asset_generation_approvals[0].approval_id,
+        prompt="portrait", parameters={"model": "muse-image"}, provider="muse2api")
     assert run.asset_generation_approvals[0].reserved_requests == 1
     assert run.asset_generation_attempts[0].status == ProviderJobState.SUBMISSION_INTENDED
     with pytest.raises(GenerationSafetyError, match="request limit"):
@@ -80,7 +78,7 @@ def test_attempt_is_reserved_before_submission_and_request_limit_is_enforced(tmp
             run,
             approval_id=run.asset_generation_approvals[0].approval_id,
             prompt="another portrait",
-            parameters={},
+            parameters={"model": "muse-image"},
             provider="muse2api",
         )
 
@@ -91,7 +89,7 @@ def test_unknown_submission_blocks_blind_resubmission_and_task_id_persists():
         run,
         approval_id=run.asset_generation_approvals[0].approval_id,
         prompt="portrait",
-        parameters={},
+        parameters={"model": "muse-image"},
         provider="muse2api",
     )
     attempt_id = run.asset_generation_attempts[0].attempt_id
@@ -102,7 +100,7 @@ def test_unknown_submission_blocks_blind_resubmission_and_task_id_persists():
             unknown,
             approval_id=unknown.asset_generation_approvals[0].approval_id,
             prompt="portrait retry",
-            parameters={},
+            parameters={"model": "muse-image"},
             provider="muse2api",
         )
 
@@ -111,7 +109,7 @@ def test_unknown_submission_blocks_blind_resubmission_and_task_id_persists():
         fresh,
         approval_id=fresh.asset_generation_approvals[0].approval_id,
         prompt="portrait",
-        parameters={},
+        parameters={"model": "muse-image"},
         provider="muse2api",
     )
     task = record_provider_task(fresh, attempt_id=fresh.asset_generation_attempts[0].attempt_id, provider_task_id="task-123")
@@ -134,7 +132,7 @@ def test_stale_approval_and_restart_recovery_are_safe():
             stale_run,
             approval_id=stale_run.asset_generation_approvals[0].approval_id,
             prompt="portrait",
-            parameters={},
+            parameters={"model": "muse-image"},
             provider="muse2api",
         )
 
@@ -143,7 +141,7 @@ def test_stale_approval_and_restart_recovery_are_safe():
         valid,
         approval_id=valid.asset_generation_approvals[0].approval_id,
         prompt="portrait",
-        parameters={},
+        parameters={"model": "muse-image"},
         provider="muse2api",
     )
     recovered = recover_interrupted_attempts(valid)

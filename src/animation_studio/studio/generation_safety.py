@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from animation_studio.core.workflow import ArtifactStatus, ProviderJobState
+from animation_studio.core.workflow import ArtifactStatus, ProviderJobState, content_hash
 from animation_studio.studio.models import (
     AssetGenerationApproval,
     AssetGenerationAttempt,
@@ -47,6 +47,16 @@ def verify_reference_hashes(reference_hashes: dict[Path, str]) -> dict[str, str]
     return normalized
 
 
+def approved_request_payload(*, provider: str, prompt: str, parameters: dict[str, object], reference_hashes: dict[str, str]) -> dict[str, object]:
+    """Canonical, persisted provider request scope (without machine-local paths)."""
+    return {
+        "provider": provider,
+        "prompt": prompt,
+        "parameters": parameters,
+        "reference_hashes": dict(sorted(reference_hashes.items())),
+    }
+
+
 def approve_asset_generation(
     run: StudioRun,
     *,
@@ -57,6 +67,10 @@ def approve_asset_generation(
     request_limit: int,
     approved_by: str,
     usage_basis: str,
+    provider: str,
+    prompt: str,
+    parameters: dict[str, object],
+    reference_hashes: dict[Path, str] | None = None,
 ) -> StudioRun:
     current = run.workflow.current(target_artifact_id)
     if current is None:
@@ -65,6 +79,8 @@ def approve_asset_generation(
         raise GenerationSafetyError("generation requires an approved current target artifact")
     if current.revision != target_revision or current.content_hash != target_content_hash:
         raise GenerationSafetyError("target artifact revision changed; reload before approving generation")
+    normalized_references = verify_reference_hashes(reference_hashes or {})
+    scope = approved_request_payload(provider=provider, prompt=prompt, parameters=parameters, reference_hashes=normalized_references)
     approval = AssetGenerationApproval(
         approval_id=uuid4().hex,
         operation_type=operation_type,
@@ -74,6 +90,8 @@ def approve_asset_generation(
         request_limit=request_limit,
         approved_by=approved_by,
         usage_basis=usage_basis,
+        approved_request=scope,
+        request_fingerprint=content_hash(scope),
     )
     return run.model_copy(update={
         "asset_generation_approvals": [*run.asset_generation_approvals, approval],
@@ -94,6 +112,8 @@ def begin_asset_attempt(
     approval = next((item for item in run.asset_generation_approvals if item.approval_id == approval_id), None)
     if approval is None:
         raise GenerationSafetyError("generation approval does not exist")
+    if not approval.approved_request or not approval.request_fingerprint:
+        raise GenerationSafetyError("historical generation approval has no complete request scope; create a new approval")
     current = run.workflow.current(approval.target_artifact_id)
     if (
         current is None
@@ -104,14 +124,26 @@ def begin_asset_attempt(
         raise GenerationSafetyError("generation approval is stale")
     if approval.reserved_requests >= approval.request_limit:
         raise GenerationSafetyError("approved generation request limit is exhausted")
+    unresolved = {
+        ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_CLAIMED,
+        ProviderJobState.SUBMISSION_UNKNOWN, ProviderJobState.SUBMITTED, ProviderJobState.RUNNING,
+    }
+    # Unknown outcomes always block their logical artifact, even with a new
+    # approval or an otherwise parallel candidate batch.
+    if any(attempt.target_artifact_id == approval.target_artifact_id and attempt.status == ProviderJobState.SUBMISSION_UNKNOWN
+           for attempt in run.asset_generation_attempts):
+        raise GenerationSafetyError("an unresolved submission blocks overlapping generation for this artifact")
     if not allow_parallel and any(
         attempt.approval_id == approval_id
         and attempt.status in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_UNKNOWN,
-                               ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}
+                               ProviderJobState.SUBMISSION_CLAIMED, ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}
         for attempt in run.asset_generation_attempts
     ):
         raise GenerationSafetyError("an unresolved generation attempt already exists for this approval")
     normalized_references = verify_reference_hashes(reference_hashes or {})
+    scope = approved_request_payload(provider=provider, prompt=prompt, parameters=parameters, reference_hashes=normalized_references)
+    if content_hash(scope) != approval.request_fingerprint or scope != approval.approved_request:
+        raise GenerationSafetyError("prompt, provider, parameters, or references differ from the approved request scope")
     reserved = approval.model_copy(update={"reserved_requests": approval.reserved_requests + 1})
     attempt = AssetGenerationAttempt(
         attempt_id=uuid4().hex,
@@ -124,6 +156,7 @@ def begin_asset_attempt(
         parameters=parameters,
         provider=provider,
         reference_hashes=normalized_references,
+        request_fingerprint=approval.request_fingerprint,
     )
     return run.model_copy(update={
         "asset_generation_approvals": [reserved if item.approval_id == approval_id else item for item in run.asset_generation_approvals],
@@ -154,6 +187,41 @@ def mark_submission_unknown(run: StudioRun, *, attempt_id: str, error: str) -> S
     )
 
 
+def claim_asset_attempt(run: StudioRun, *, attempt_id: str) -> tuple[StudioRun, AssetGenerationAttempt]:
+    """Revalidate a durable intent immediately before a provider POST.
+
+    This is intentionally pure so the service can persist the returned run
+    under its process lock before crossing the external boundary.
+    """
+    attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
+    if attempt is None or attempt.status != ProviderJobState.SUBMISSION_INTENDED:
+        raise GenerationSafetyError("only an unclaimed persisted intent may be submitted")
+    approval = next((item for item in run.asset_generation_approvals if item.approval_id == attempt.approval_id), None)
+    if approval is None or not approval.approved_request or not approval.request_fingerprint:
+        raise GenerationSafetyError("generation approval is incomplete or missing")
+    if approval.operation_type != attempt.operation_type or approval.target_artifact_id != attempt.target_artifact_id:
+        raise GenerationSafetyError("attempt does not match its approved operation scope")
+    if (approval.target_revision, approval.target_content_hash) != (attempt.target_revision, attempt.target_content_hash):
+        raise GenerationSafetyError("attempt does not match its approved target revision")
+    current = run.workflow.current(attempt.target_artifact_id)
+    if current is None or current.status != ArtifactStatus.APPROVED or (current.revision, current.content_hash) != (attempt.target_revision, attempt.target_content_hash):
+        raise GenerationSafetyError("attempt target is no longer current and approved")
+    # This also catches a stale script/reference dependency rather than trusting
+    # a matching approval and attempt pair.
+    run.workflow._validate_current_dependencies(current)
+    references = {Path(path): digest for path, digest in attempt.reference_hashes.items()}
+    normalized = verify_reference_hashes(references)
+    scope = approved_request_payload(provider=attempt.provider, prompt=attempt.prompt, parameters=attempt.parameters, reference_hashes=normalized)
+    if attempt.request_fingerprint != approval.request_fingerprint or content_hash(scope) != approval.request_fingerprint or scope != approval.approved_request:
+        raise GenerationSafetyError("persisted attempt differs from the approved request fingerprint")
+    if approval.reserved_requests > approval.request_limit:
+        raise GenerationSafetyError("generation approval reservation is invalid")
+    if any(other.attempt_id != attempt_id and other.target_artifact_id == attempt.target_artifact_id and other.status == ProviderJobState.SUBMISSION_UNKNOWN
+           for other in run.asset_generation_attempts):
+        raise GenerationSafetyError("unresolved submission blocks this provider request")
+    return _replace_attempt(run, attempt_id, status=ProviderJobState.SUBMISSION_CLAIMED), attempt
+
+
 def recover_interrupted_attempts(run: StudioRun) -> StudioRun:
     """Turn only unsubmitted intents into an explicit reconciliation state."""
     attempts = [
@@ -161,7 +229,7 @@ def recover_interrupted_attempts(run: StudioRun) -> StudioRun:
             "status": ProviderJobState.SUBMISSION_UNKNOWN,
             "error": "Studio restarted after submission intent; reconcile before retrying.",
         })
-        if attempt.status == ProviderJobState.SUBMISSION_INTENDED else attempt
+        if attempt.status in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_CLAIMED} else attempt
         for attempt in run.asset_generation_attempts
     ]
     return run.model_copy(update={"asset_generation_attempts": attempts})
@@ -172,7 +240,7 @@ def _replace_attempt(run: StudioRun, attempt_id: str, **updates: object) -> Stud
     if len(matches) != 1:
         raise GenerationSafetyError("generation attempt record is inconsistent")
     current = matches[0]
-    if current.status not in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_UNKNOWN, ProviderJobState.RUNNING}:
+    if current.status not in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_CLAIMED, ProviderJobState.SUBMISSION_UNKNOWN, ProviderJobState.RUNNING}:
         raise GenerationSafetyError("generation attempt cannot change submission state")
     updated = current.model_copy(update=updates)
     return run.model_copy(update={

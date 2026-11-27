@@ -247,6 +247,10 @@ class AssetGenerationApproval(BaseModel):
     approved_by: str = Field(min_length=1, max_length=120)
     approved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     usage_basis: str = Field(min_length=1, max_length=1000)
+    # Missing on historical records.  Such approvals remain inspectable, but are
+    # deliberately ineligible for a new provider POST.
+    approved_request: dict[str, object] | None = None
+    request_fingerprint: str | None = Field(default=None, min_length=64, max_length=64)
 
     @model_validator(mode="after")
     def limit_is_not_exceeded(self) -> "AssetGenerationApproval":
@@ -269,6 +273,7 @@ class AssetGenerationAttempt(BaseModel):
     prompt: str = Field(min_length=1, max_length=30000)
     parameters: dict[str, object] = Field(default_factory=dict)
     reference_hashes: dict[str, str] = Field(default_factory=dict)
+    request_fingerprint: str | None = Field(default=None, min_length=64, max_length=64)
     provider: str = Field(min_length=1, max_length=120)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     submitted_at: datetime | None = None
@@ -305,6 +310,15 @@ class AppearanceSpec(BaseModel):
     selected_candidate_id: str | None = None
     approved_candidate_id: str | None = None
     approved_reference_artifact_id: str | None = None
+
+
+class AppearanceEditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
+    description: str = Field(min_length=1, max_length=4000)
+    locked_attributes: list[str] = Field(default_factory=list, max_length=40)
 
 
 class AppearanceApprovalRequest(BaseModel):
@@ -362,6 +376,7 @@ class StudioRun(BaseModel):
     asset_generation_approvals: list[AssetGenerationApproval] = Field(default_factory=list)
     asset_generation_attempts: list[AssetGenerationAttempt] = Field(default_factory=list)
     appearance_specs: list[AppearanceSpec] = Field(default_factory=list)
+    appearance_spec_history: list[AppearanceSpec] = Field(default_factory=list)
     analysis: CreativePackage | None = None
     project_dir: str | None = None
     deferred_shots: list[str] = Field(default_factory=list)

@@ -233,13 +233,13 @@ def _append_script_revision(run: StudioRun, package: ScriptPackage) -> StudioRun
     )
     workflow = run.workflow.stale_dependents(artifact_id).append_revision(artifact)
     workflow = workflow.transition(StudioRunStatus.SCRIPT_REVIEW)
-    return save_run(run.model_copy(update={
+    return run.model_copy(update={
         "status": StudioRunStatus.SCRIPT_REVIEW,
         "workflow": workflow,
         "script_revisions": [*run.script_revisions, package],
         "approved_script_revision": None,
         "error": None,
-    }))
+    })
 
 
 def generate_script_run(
@@ -282,9 +282,17 @@ def generate_script_run(
             return save_run(updated.model_copy(update={"codex_usage": _merge_usage(updated.codex_usage, usage),
                                                         "authoring_operations": [*updated.authoring_operations[:-1], finished]}))
     except (CodexBridgeError, StudioWorkflowError, ValidationError, OSError) as exc:
-        failed = get_run(run_id)
-        return save_run(failed.model_copy(update={"status": operation.previous_status, "error": str(exc)[:2400],
-            "authoring_operations": [*failed.authoring_operations[:-1], operation.model_copy(update={"status": AuthoringOperationStatus.FAILED, "finished_at": _utcnow(), "error": str(exc)[:2400]})]}))
+        with _run_lock(run_id):
+            failed = get_run(run_id)
+            matches = [item for item in failed.authoring_operations if item.operation_id == operation.operation_id]
+            if len(matches) != 1 or matches[0].status != AuthoringOperationStatus.STARTED:
+                raise StudioWorkflowError("Authoring operation no longer owns this run") from exc
+            failed_operation = matches[0].model_copy(update={"status": AuthoringOperationStatus.FAILED,
+                "finished_at": _utcnow(), "error": str(exc)[:2400]})
+            operations = [failed_operation if item.operation_id == operation.operation_id else item for item in failed.authoring_operations]
+            workflow = failed.workflow.transition(StudioRunStatus(operation.previous_status))
+            return save_run(failed.model_copy(update={"status": operation.previous_status, "workflow": workflow,
+                "error": str(exc)[:2400], "authoring_operations": operations}))
 
 
 def revise_script(run_id: str, package: ScriptPackage, *, expected_revision: int, expected_content_hash: str) -> StudioRun:
@@ -295,7 +303,7 @@ def revise_script(run_id: str, package: ScriptPackage, *, expected_revision: int
         current = run.workflow.current("script")
         if current is None or current.revision != expected_revision or current.content_hash != expected_content_hash:
             raise StudioWorkflowError("Script revision changed; reload before saving")
-        return _append_script_revision(run, package)
+        return save_run(_append_script_revision(run, package))
 
 
 def approve_script(run_id: str, *, approved_by: str, expected_revision: int, expected_content_hash: str) -> StudioRun:

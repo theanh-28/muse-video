@@ -80,7 +80,7 @@ class QAStatus(StrEnum):
 
 _TRANSITIONS: dict[StudioRunStatus, set[StudioRunStatus]] = {
     StudioRunStatus.BRIEF_RECEIVED: {StudioRunStatus.SCRIPT_GENERATING, StudioRunStatus.PAUSED, StudioRunStatus.FAILED},
-    StudioRunStatus.SCRIPT_GENERATING: {StudioRunStatus.SCRIPT_REVIEW, StudioRunStatus.PAUSED, StudioRunStatus.FAILED},
+    StudioRunStatus.SCRIPT_GENERATING: {StudioRunStatus.BRIEF_RECEIVED, StudioRunStatus.SCRIPT_REVIEW, StudioRunStatus.SCRIPT_APPROVED, StudioRunStatus.PAUSED, StudioRunStatus.FAILED},
     StudioRunStatus.SCRIPT_REVIEW: {StudioRunStatus.SCRIPT_GENERATING, StudioRunStatus.SCRIPT_APPROVED, StudioRunStatus.PAUSED},
     StudioRunStatus.SCRIPT_APPROVED: {StudioRunStatus.SCRIPT_GENERATING, StudioRunStatus.SCRIPT_REVIEW, StudioRunStatus.ASSET_PREPARATION, StudioRunStatus.PAUSED},
     StudioRunStatus.ASSET_PREPARATION: {StudioRunStatus.ASSET_REVIEW, StudioRunStatus.PAUSED, StudioRunStatus.FAILED},

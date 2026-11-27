@@ -6,7 +6,7 @@ import httpx
 from animation_studio.core.models import ReferenceSpec
 from animation_studio.providers.base import ProviderNotReady, VideoRequest
 from animation_studio.providers.manual import ManualProvider
-from animation_studio.providers.muse2api import Muse2ApiProvider
+from animation_studio.providers.muse2api import ImageRequest, Muse2ApiProvider
 
 
 def test_manual_provider_never_submits_to_network():
@@ -104,4 +104,29 @@ def test_muse_download_refuses_other_origin(tmp_path):
     task = type("Task", (), {"raw": {"url": "https://example.com/private.mp4"}})()
     with pytest.raises(Exception, match="other than the configured gateway"):
         provider.download_result(task, tmp_path / "out.mp4")
+
+
+def test_muse_image_task_contract_poll_and_download(monkeypatch, tmp_path):
+    seen = []
+
+    def handler(request):
+        seen.append((request.method, request.url.path, request.headers.get("idempotency-key")))
+        if request.method == "POST":
+            return httpx.Response(202, json={"id": "image-123", "status": "queued"})
+        if request.url.path.endswith("/image-123"):
+            return httpx.Response(200, json={"id": "image-123", "status": "completed", "data": [{"url": "/v1/media/fox.png"}]})
+        if request.url.path.endswith("/fox.png"):
+            return httpx.Response(200, content=b"synthetic-png", headers={"content-type": "image/png"})
+        return httpx.Response(404)
+
+    provider = Muse2ApiProvider("http://127.0.0.1:18610/v1", api_key="test-key", submission_enabled=True)
+    monkeypatch.setattr(provider, "_client", lambda: httpx.Client(
+        transport=httpx.MockTransport(handler), headers={"Authorization": "Bearer test-key"}
+    ))
+    submitted = provider.submit_image(ImageRequest(prompt="fox portrait", idempotency_key="attempt-1"))
+    assert submitted.task_id == "image-123"
+    polled = provider.get_image_task(submitted.task_id)
+    output = provider.download_image_result(polled, tmp_path / "images" / "fox.png")
+    assert output.read_bytes() == b"synthetic-png"
+    assert seen[0] == ("POST", "/v1/images/tasks", "attempt-1")
 

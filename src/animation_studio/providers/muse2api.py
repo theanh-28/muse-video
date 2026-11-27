@@ -217,6 +217,19 @@ class Muse2ApiProvider:
             raise ProviderError(f"Muse2API image task polling failed ({type(exc).__name__})") from exc
         return ProviderTask(task_id=task_id, status=str(data.get("status", "unknown")), raw=data)
 
+    def download_image_result(self, task: ProviderTask, destination: Path) -> Path:
+        """Download one completed image result from the configured gateway only."""
+        raw_url = task.raw.get("url")
+        if not raw_url and isinstance(task.raw.get("result"), dict):
+            raw_url = task.raw["result"].get("url")
+        if not raw_url and isinstance(task.raw.get("data"), list) and task.raw["data"]:
+            first = task.raw["data"][0]
+            if isinstance(first, dict):
+                raw_url = first.get("url")
+        if not isinstance(raw_url, str) or not raw_url:
+            raise ProviderError("Completed image task does not contain an image URL")
+        return self._download_gateway_result(task_url=raw_url, destination=destination, expected_prefix="image/")
+
     def get_task(self, task_id: str) -> ProviderTask:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", task_id):
             raise ProviderError("Invalid task ID")
@@ -242,7 +255,10 @@ class Muse2ApiProvider:
             raw_url = task.raw["result"].get("url")
         if not isinstance(raw_url, str) or not raw_url:
             raise ProviderError("Completed task does not contain a media URL")
-        url = urljoin(self.base_url + "/", raw_url)
+        return self._download_gateway_result(task_url=raw_url, destination=destination, expected_prefix="video/")
+
+    def _download_gateway_result(self, *, task_url: str, destination: Path, expected_prefix: str) -> Path:
+        url = urljoin(self.base_url + "/", task_url)
         configured = urlsplit(self.base_url)
         target = urlsplit(url)
         if (target.scheme, target.hostname, target.port) != (
@@ -262,7 +278,7 @@ class Muse2ApiProvider:
                 with client.stream("GET", url) as response:
                     response.raise_for_status()
                     content_type = response.headers.get("content-type", "").split(";", 1)[0]
-                    if content_type and not content_type.startswith("video/"):
+                    if content_type and not content_type.startswith(expected_prefix):
                         raise ProviderError(f"Unexpected media MIME type: {content_type}")
                     with temp.open("xb") as stream:
                         for chunk in response.iter_bytes(1024 * 1024):

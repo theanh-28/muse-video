@@ -78,3 +78,12 @@ def test_legacy_run_remains_readable(draft_client, legacy_autopilot):
     assert response.json()["status"] == "SUBMITTED"
     assert response.json()["task_id"] == "TASK-OLD"
     assert calls == {"analysis": 0, "autopilot": 0, "submit": 0}
+
+
+def test_script_studio_asset_exposes_revision_bound_mutations(draft_client):
+    client, _calls, _tmp_path = draft_client
+    response = client.get("/assets/script-studio.js")
+    assert response.status_code == 200
+    assert "expected_revision" in response.text
+    assert "expected_content_hash" in response.text
+    assert "document.querySelectorAll('.script-actions button')" in response.text

@@ -22,3 +22,5 @@ Tests cover script revision history, exact source contracts, approval persistenc
 Validation also rejects blank dialogue text, duplicate character/beat/dialogue IDs, and character dialogue marked `NOT_APPLICABLE` on screen. It preserves exact user text rather than trimming or rewriting it.
 
 Feedback authoring receives the complete current `ScriptPackage`, its content hash, the original brief, and feedback. An approved script can be reopened into a new draft revision; the prior approval remains historical and the new revision requires a new approval.
+
+The Script Studio sends revision/hash-bound mutations and renders the persisted API response directly after a mutation. This avoids the legacy polling refresh being suppressed while an action is marked busy. Browser interaction remains unverified; the static asset route is covered by API regression tests.

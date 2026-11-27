@@ -59,6 +59,7 @@
   }
 
   async function selectRun(id) {
+    if (activeRunId !== id) window.ScriptStudio?.reset?.();
     activeRunId = id;
     $("new-view").classList.add("hidden"); $("run-view").classList.remove("hidden");
     await refreshRun(); await loadRuns();
@@ -181,7 +182,7 @@
   });
 
   $("new-run").addEventListener("click",()=>{
-    activeRunId=null;if(timer)clearInterval(timer);$("page-title").textContent="Bắt đầu một câu chuyện";$("run-view").classList.add("hidden");$("new-view").classList.remove("hidden");updateStepper("NEW");
+    window.ScriptStudio?.reset?.();activeRunId=null;if(timer)clearInterval(timer);$("page-title").textContent="Bắt đầu một câu chuyện";$("run-view").classList.add("hidden");$("new-view").classList.remove("hidden");updateStepper("NEW");
   });
 
   loadHealth();loadRuns();setInterval(loadHealth,15000);

@@ -143,7 +143,7 @@ def create_app() -> FastAPI:
 
     @app.get("/assets/{asset_name}")
     async def assets(asset_name: str):
-        if asset_name not in {"app.js", "app.css"}:
+        if asset_name not in {"app.js", "app.css", "script-studio.js"}:
             raise HTTPException(status_code=404)
         path = STATIC_DIR / asset_name
         return FileResponse(path)

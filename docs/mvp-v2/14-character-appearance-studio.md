@@ -16,4 +16,4 @@ The Appearance screen supports preparation, specification approval, a three-requ
 
 ## Limitations
 
-Polling, download, image-byte candidate finalization, candidate revision/combine, and final reference-image approval still need integration with a mock gateway before this stage can be called complete. Live Muse remains disabled.
+Mock-backed service tests now cover task-ID persistence, byte-validated candidate finalization, completed-only selection, and immutable final-reference approval. Gateway submit/poll/download has not yet been wired through the service/API, and the UI therefore cannot display a real provider result. Live Muse remains disabled.

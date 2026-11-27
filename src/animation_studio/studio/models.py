@@ -283,6 +283,7 @@ class AppearanceCandidate(BaseModel):
 
     candidate_id: str = Field(min_length=1, max_length=80)
     attempt_id: str | None = None
+    provider_task_id: str | None = None
     image_path: str | None = None
     content_hash: str | None = Field(default=None, min_length=64, max_length=64)
     status: Literal["PLANNED", "SUBMITTED", "COMPLETED", "FAILED", "APPROVED"] = "PLANNED"
@@ -303,6 +304,7 @@ class AppearanceSpec(BaseModel):
     candidates: list[AppearanceCandidate] = Field(default_factory=list)
     selected_candidate_id: str | None = None
     approved_candidate_id: str | None = None
+    approved_reference_artifact_id: str | None = None
 
 
 class AppearanceApprovalRequest(BaseModel):
@@ -325,6 +327,13 @@ class AppearanceSelectionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     character_id: str = Field(min_length=1, max_length=120)
     candidate_id: str = Field(min_length=1, max_length=80)
+
+
+class AppearanceReferenceApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
+    approved_by: str = Field(min_length=1, max_length=120)
 
 
 class ContinuityReviewAcceptRequest(BaseModel):

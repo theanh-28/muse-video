@@ -7,7 +7,7 @@
 | M2 script authoring | PARTIAL | `studio/scripts.py`, Script Studio UI, service/API tests | Brief, review, edit, feedback, history and approval UI implemented; browser automation/live authoring remain unverified |
 | M3–M9 | NOT_STARTED | Directive scope | No live provider calls made |
 
-Last verified full regression: 63 passed, 1 third-party `starlette.testclient` deprecation warning. Skill validation passed for all 8 project-local skills. No live provider request was made.
+Last verified full regression: 65 passed, 1 third-party `starlette.testclient` deprecation warning. Skill validation passed for all 8 project-local skills. No live provider request was made.
 
 ## Character Appearance delivery note
 

@@ -26,6 +26,7 @@ from animation_studio.studio.models import (
     AppearanceApprovalRequest,
     AppearanceCandidateRequest,
     AppearanceSelectionRequest,
+    AppearanceReferenceApprovalRequest,
 )
 from animation_studio.studio.service import (
     STUDIO_PROJECTS_DIR,
@@ -51,6 +52,7 @@ from animation_studio.studio.service import (
     approve_appearance_generation,
     prepare_appearance_candidates,
     select_appearance_candidate,
+    approve_selected_appearance_candidate,
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
@@ -257,6 +259,13 @@ def create_app() -> FastAPI:
     async def choose_candidate(run_id: str, payload: AppearanceSelectionRequest):
         return _public(await asyncio.to_thread(
             select_appearance_candidate, run_id, character_id=payload.character_id, candidate_id=payload.candidate_id,
+        ))
+
+    @app.post("/api/runs/{run_id}/appearance/reference/approve")
+    async def approve_appearance_reference(run_id: str, payload: AppearanceReferenceApprovalRequest):
+        return _public(await asyncio.to_thread(
+            approve_selected_appearance_candidate, run_id, character_id=payload.character_id,
+            expected_hash=payload.expected_content_hash, approved_by=payload.approved_by,
         ))
 
     @app.post("/api/runs/{run_id}/manifest")

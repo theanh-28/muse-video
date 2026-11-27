@@ -430,6 +430,13 @@ def select_appearance_candidate(run_id: str, *, character_id: str, candidate_id:
         return save_run(appearance_service.select_candidate(get_run(run_id), character_id=character_id, candidate_id=candidate_id))
 
 
+def approve_selected_appearance_candidate(run_id: str, *, character_id: str, expected_hash: str, approved_by: str) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(appearance_service.approve_selected_candidate(
+            get_run(run_id), character_id=character_id, expected_hash=expected_hash, approved_by=approved_by
+        ))
+
+
 def _build_analysis_prompt(brief: StudioBrief) -> str:
     rules = project_authoring_context("storyboard")
     return f"""You are Codex acting as an animation director and senior production engineer.

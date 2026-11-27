@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Literal
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -180,6 +181,29 @@ class ScriptFeedbackRequest(BaseModel):
     expected_content_hash: str = Field(min_length=64, max_length=64)
 
 
+class AuthoringOperationStatus(StrEnum):
+    STARTED = "STARTED"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    INTERRUPTED = "INTERRUPTED"
+
+
+class AuthoringOperation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    operation_id: str
+    kind: Literal["INITIAL_SCRIPT", "SCRIPT_REVISION"]
+    previous_status: str
+    base_revision: int | None = None
+    base_content_hash: str | None = None
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    finished_at: datetime | None = None
+    status: AuthoringOperationStatus = AuthoringOperationStatus.STARTED
+    result_revision: int | None = None
+    error: str | None = None
+    usage: dict[str, int] | None = None
+
+
 class ScriptEditRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -225,6 +249,7 @@ class StudioRun(BaseModel):
     workflow: WorkflowState = Field(default_factory=WorkflowState)
     script_revisions: list[ScriptPackage] = Field(default_factory=list)
     approved_script_revision: int | None = None
+    authoring_operations: list[AuthoringOperation] = Field(default_factory=list)
     analysis: CreativePackage | None = None
     project_dir: str | None = None
     deferred_shots: list[str] = Field(default_factory=list)

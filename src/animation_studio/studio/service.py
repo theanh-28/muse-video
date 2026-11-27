@@ -78,6 +78,8 @@ from animation_studio.studio.models import (
     GenerationApprovalRequest,
     StudioBrief,
     StudioRun,
+    AuthoringOperation,
+    AuthoringOperationStatus,
 )
 from animation_studio.studio.scripts import ScriptPackage
 
@@ -251,8 +253,18 @@ def generate_script_run(
         current = run.workflow.current("script")
         if expected_revision is not None and (current is None or current.revision != expected_revision or current.content_hash != expected_content_hash):
             raise StudioWorkflowError("Script revision changed; reload before requesting feedback")
+        if any(operation.status == AuthoringOperationStatus.STARTED for operation in run.authoring_operations):
+            raise StudioWorkflowError("A script authoring operation is already running")
         generating = run.workflow.transition(StudioRunStatus.SCRIPT_GENERATING)
-        run = save_run(run.model_copy(update={"status": StudioRunStatus.SCRIPT_GENERATING, "workflow": generating, "error": None}))
+        operation = AuthoringOperation(
+            operation_id=uuid4().hex,
+            kind="SCRIPT_REVISION" if feedback else "INITIAL_SCRIPT",
+            previous_status=str(run.workflow.status),
+            base_revision=current.revision if current else None,
+            base_content_hash=current.content_hash if current else None,
+        )
+        run = save_run(run.model_copy(update={"status": StudioRunStatus.SCRIPT_GENERATING, "workflow": generating,
+                                               "authoring_operations": [*run.authoring_operations, operation], "error": None}))
     try:
         package, usage = complete_structured(_script_prompt(run.brief, feedback, run.script_revisions[-1] if feedback else None,
                                                             current.content_hash if feedback and current else None), ScriptPackage)
@@ -265,14 +277,14 @@ def generate_script_run(
             ):
                 raise StudioWorkflowError("Script revision changed; reload before requesting feedback")
             updated = _append_script_revision(current, package)
-        return save_run(updated.model_copy(update={"codex_usage": _merge_usage(updated.codex_usage, usage)}))
+            finished = operation.model_copy(update={"status": AuthoringOperationStatus.SUCCEEDED, "finished_at": _utcnow(),
+                                                     "result_revision": len(updated.script_revisions), "usage": usage})
+            return save_run(updated.model_copy(update={"codex_usage": _merge_usage(updated.codex_usage, usage),
+                                                        "authoring_operations": [*updated.authoring_operations[:-1], finished]}))
     except (CodexBridgeError, StudioWorkflowError, ValidationError, OSError) as exc:
         failed = get_run(run_id)
-        return save_run(failed.model_copy(update={
-            "status": StudioRunStatus.FAILED,
-            "workflow": failed.workflow.transition(StudioRunStatus.FAILED),
-            "error": str(exc)[:2400],
-        }))
+        return save_run(failed.model_copy(update={"status": operation.previous_status, "error": str(exc)[:2400],
+            "authoring_operations": [*failed.authoring_operations[:-1], operation.model_copy(update={"status": AuthoringOperationStatus.FAILED, "finished_at": _utcnow(), "error": str(exc)[:2400]})]}))
 
 
 def revise_script(run_id: str, package: ScriptPackage, *, expected_revision: int, expected_content_hash: str) -> StudioRun:

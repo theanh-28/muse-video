@@ -34,4 +34,6 @@ The offline two-character fixture verifies that two independently approved scope
 
 `PUT /api/runs/{run_id}/appearance/specification` requires the reviewed character ID, revision, and hash. The service appends a DRAFT revision, stores the replaced specification and candidates in `appearance_spec_history`, and stales dependent references; it never mutates an approved spec in place. Preparing appearance now transitions both `run.status` and `workflow.status` to `ASSET_PREPARATION` in the same saved update.
 
+The existing Appearance Studio card now exposes the description as an editable field with a revision-bound “Lưu bản sửa” action. The action disables its control while the request is pending and renders the persisted response or leaves the unsaved text in place on failure.
+
 Final reference approval rehashes the run-contained file and fully decodes PNG, JPEG, WEBP, or GIF through Pillow before approval. Header-shaped/truncated bytes, zero dimensions, and unreasonable decoded sizes are rejected. Pillow is now an explicit project dependency.

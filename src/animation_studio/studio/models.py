@@ -15,7 +15,7 @@ from animation_studio.core.models import (
     ShotState,
     WorldBible,
 )
-from animation_studio.core.workflow import WorkflowState
+from animation_studio.core.workflow import ProviderJobState, WorkflowState
 from animation_studio.studio.scripts import ScriptPackage
 
 
@@ -232,6 +232,52 @@ class GenerationSubmitRequest(BaseModel):
     confirmation: str = Field(min_length=8, max_length=200)
 
 
+class AssetGenerationApproval(BaseModel):
+    """A narrowly-scoped, persisted approval for an asset provider request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    approval_id: str = Field(min_length=1, max_length=80)
+    operation_type: Literal["IMAGE", "MUSE_VOICE_SAMPLE"]
+    target_artifact_id: str = Field(min_length=1, max_length=120)
+    target_revision: int = Field(ge=1)
+    target_content_hash: str = Field(min_length=64, max_length=64)
+    request_limit: int = Field(ge=1, le=100)
+    reserved_requests: int = Field(default=0, ge=0)
+    approved_by: str = Field(min_length=1, max_length=120)
+    approved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    usage_basis: str = Field(min_length=1, max_length=1000)
+
+    @model_validator(mode="after")
+    def limit_is_not_exceeded(self) -> "AssetGenerationApproval":
+        if self.reserved_requests > self.request_limit:
+            raise ValueError("reserved generation requests exceed the approved request limit")
+        return self
+
+
+class AssetGenerationAttempt(BaseModel):
+    """Durable record written before an external asset-generation POST."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    attempt_id: str = Field(min_length=1, max_length=80)
+    approval_id: str = Field(min_length=1, max_length=80)
+    operation_type: Literal["IMAGE", "MUSE_VOICE_SAMPLE"]
+    target_artifact_id: str = Field(min_length=1, max_length=120)
+    target_revision: int = Field(ge=1)
+    target_content_hash: str = Field(min_length=64, max_length=64)
+    prompt: str = Field(min_length=1, max_length=30000)
+    parameters: dict[str, object] = Field(default_factory=dict)
+    reference_hashes: dict[str, str] = Field(default_factory=dict)
+    provider: str = Field(min_length=1, max_length=120)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    submitted_at: datetime | None = None
+    provider_task_id: str | None = None
+    status: ProviderJobState = ProviderJobState.SUBMISSION_INTENDED
+    output_paths: list[str] = Field(default_factory=list)
+    error: str | None = None
+
+
 class ContinuityReviewAcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -250,6 +296,8 @@ class StudioRun(BaseModel):
     script_revisions: list[ScriptPackage] = Field(default_factory=list)
     approved_script_revision: int | None = None
     authoring_operations: list[AuthoringOperation] = Field(default_factory=list)
+    asset_generation_approvals: list[AssetGenerationApproval] = Field(default_factory=list)
+    asset_generation_attempts: list[AssetGenerationAttempt] = Field(default_factory=list)
     analysis: CreativePackage | None = None
     project_dir: str | None = None
     deferred_shots: list[str] = Field(default_factory=list)

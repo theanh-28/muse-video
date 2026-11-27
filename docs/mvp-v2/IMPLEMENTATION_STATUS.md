@@ -3,11 +3,11 @@
 | Milestone | Status | Evidence | Notes |
 |---|---|---|---|
 | M0 baseline audit | DONE | `00-baseline-audit.md` | FFmpeg tools unavailable locally |
-| M1-R workflow hardening | DONE | `10-foundation-review.md`, stale-client tests | Expected revision/hash contract added; cross-process lock remains deferred |
+| M1-R workflow hardening | PARTIAL | `10-foundation-review.md`, `19-run-transaction-and-authoring-operations.md`, `24-generation-safety.md` | Revision-bound dependencies, transitive invalidation, local process locking, and explicit recovery are implemented; production submission integration remains pending. |
 | M2 script authoring | PARTIAL | `studio/scripts.py`, Script Studio UI, service/API tests | Brief, review, edit, feedback, history and approval UI implemented; browser automation/live authoring remain unverified |
 | M3–M9 | NOT_STARTED | Directive scope | No live provider calls made |
 
-Last verified regression result: 52 passed, 1 warning. Update this file at every subsequent milestone.
+Last verified focused result: 16 passed across authoring, dependency, generation-safety, and process-lock tests. Full regression must be rerun before the next milestone is accepted.
 
 ## Directive 004 delivery note
 

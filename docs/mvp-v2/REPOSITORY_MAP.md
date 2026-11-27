@@ -9,15 +9,15 @@
 ## Application modules
 
 - `core/models.py` defines project, episode, shot, provider, manifest, job, and continuity Pydantic models. `core/continuity.py` validates dependencies and records observed continuity.
-- `core/workflow.py` contains the v2 workflow state machine, versioned artifact records, approvals, dependency invalidation foundation, and content hashing.
-- `storage/files.py` provides root containment, JSON/YAML load/dump, and atomic replacement for overwrite writes.
+- `core/workflow.py` contains the v2 workflow state machine, versioned artifact records, revision/hash-bound dependencies, approvals, transitive invalidation, and content hashing.
+- `storage/files.py` provides root containment, JSON/YAML load/dump, and atomic replacement for overwrite writes. `storage/locking.py` provides local OS advisory locks used by Studio run mutations.
 - `services/prompts.py`, `manifest.py`, and `jobs.py` own prompt construction, manifest approval/hash checks, and job transitions.
 - `providers/base.py`, `manual.py`, and `muse2api.py` define the provider boundary, manual media workflow, and opt-in experimental gateway adapter.
 - `media/ffmpeg.py` and `media/qc.py` inspect/conform media and produce technical QC evidence.
 
 ## Studio workflow
 
-`studio/service.py` remains the compatibility facade for persisted Studio runs, legacy generation/continuity/export flow, and v2 script use cases. `studio/models.py` defines request/run models. `studio/scripts.py` defines structured script, beat, character, and dialogue contracts. `studio/codex.py` runs structured Codex/OpenAI/Gemini authoring and injects project-local instruction context. `studio/youtube_metadata.py` retains the existing local metadata draft workflow.
+`studio/service.py` remains the compatibility facade for persisted Studio runs, legacy generation/continuity/export flow, and v2 script use cases. `studio/models.py` defines request/run models including durable asset request approvals/attempts. `studio/generation_safety.py` validates those approvals, reserves attempts before POST, hashes references, and preserves ambiguous submissions for reconciliation. `studio/scripts.py` defines structured script, beat, character, and dialogue contracts. `studio/codex.py` runs structured Codex/OpenAI/Gemini authoring and injects project-local instruction context. `studio/youtube_metadata.py` retains the existing local metadata draft workflow.
 
 Current v2 implementation is limited to brief-to-script authoring foundation: `BRIEF_RECEIVED`, `SCRIPT_GENERATING`, `SCRIPT_REVIEW`, and `SCRIPT_APPROVED`. Appearance/voice, production planning, batch generation, cinematic QA, mixed-audio assembly, and final v2 export remain unimplemented.
 
@@ -38,7 +38,7 @@ Existing web routes cover health, run creation/list/detail, legacy plan/manifest
 
 ## Persistence, safety, and blockers
 
-Run records reside under `data/studio/runs` at runtime and are ignored because they can contain user project state. Project-local storage is the source of truth; path containment and atomic overwrite are implemented. Current locking is in-process only; cross-process mutation protection remains a documented limitation. Live generation is experimental and opt-in; no capability is live-verified merely by source inspection.
+Run records reside under `data/studio/runs` at runtime and are ignored because they can contain user project state. Project-local storage is the source of truth; path containment, atomic overwrite, and local OS advisory writer locks are implemented. Asset-generation approvals and intents are persisted with the run; unresolved submission intents become `SUBMISSION_UNKNOWN` and block blind retries. Live generation remains experimental, opt-in, and disabled until a caller integrates these safety contracts; no capability is live-verified merely by source inspection.
 
 ## Intentionally untracked material
 

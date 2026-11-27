@@ -4,7 +4,7 @@ import pytest
 
 from animation_studio.core.workflow import ArtifactRevision, ArtifactStatus, StudioRunStatus, WorkflowState, content_hash
 from animation_studio.studio import service
-from animation_studio.studio.models import StudioBrief
+from animation_studio.studio.models import AuthoringOperationStatus, StudioBrief
 from animation_studio.studio.scripts import (
     DialogueLine,
     ScreenPresence,
@@ -114,3 +114,31 @@ def test_feedback_prompt_contains_the_reviewed_script():
     assert "Change the ending." in prompt
     assert "a" * 64 in prompt
     assert "preserve unrelated content" in prompt
+
+
+def test_interrupted_authoring_recovers_without_invoking_runtime(tmp_path, monkeypatch):
+    monkeypatch.setattr(service, "RUNS_DIR", tmp_path / "runs")
+    calls = 0
+
+    def should_not_run(_prompt, _model):
+        nonlocal calls
+        calls += 1
+        raise AssertionError("recovery must not invoke authoring")
+
+    monkeypatch.setattr(service, "complete_structured", should_not_run)
+    run = service.create_run(StudioBrief(brief="A fox returns a lost letter to its owner."))
+    with service._run_lock(run.run_id):
+        persisted = service.get_run(run.run_id)
+        operation = service.AuthoringOperation(
+            operation_id="interrupted", kind="INITIAL_SCRIPT", previous_status="BRIEF_RECEIVED"
+        )
+        service.save_run(persisted.model_copy(update={
+            "status": StudioRunStatus.SCRIPT_GENERATING,
+            "workflow": persisted.workflow.transition(StudioRunStatus.SCRIPT_GENERATING),
+            "authoring_operations": [operation],
+        }))
+    recovered = service.recover_interrupted_authoring_operations(run.run_id)
+    assert recovered.status == StudioRunStatus.BRIEF_RECEIVED
+    assert recovered.workflow.status == StudioRunStatus.BRIEF_RECEIVED
+    assert recovered.authoring_operations[0].status == AuthoringOperationStatus.INTERRUPTED
+    assert calls == 0

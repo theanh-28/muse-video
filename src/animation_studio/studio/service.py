@@ -65,6 +65,7 @@ from animation_studio.storage.files import (
     resolve_inside,
     write_text,
 )
+from animation_studio.storage.locking import ProcessFileLock
 from animation_studio.studio.codex import (
     CodexBridgeError,
     REPO_ROOT,
@@ -89,7 +90,7 @@ RUNS_DIR = REPO_ROOT / "data" / "studio" / "runs"
 STUDIO_PROJECTS_DIR = REPO_ROOT / "projects" / "studio"
 POLL_LOCK = asyncio.Lock()
 SUBMIT_LOCK = asyncio.Lock()
-_RUN_LOCKS: dict[str, threading.RLock] = {}
+_RUN_LOCKS: dict[str, ProcessFileLock] = {}
 _RUN_LOCKS_GUARD = threading.Lock()
 
 
@@ -116,14 +117,10 @@ def _run_path(run_id: str) -> Path:
     return RUNS_DIR / f"{run_id}.json"
 
 
-def _run_lock(run_id: str) -> threading.RLock:
-    """Serialize state mutation for a run in this process.
-
-    Persistence remains atomic; deployment uses a single local Uvicorn worker,
-    so this protects concurrent browser requests without adding a database.
-    """
+def _run_lock(run_id: str) -> ProcessFileLock:
+    """Serialize a run's read-modify-write transaction across local processes."""
     with _RUN_LOCKS_GUARD:
-        return _RUN_LOCKS.setdefault(run_id, threading.RLock())
+        return _RUN_LOCKS.setdefault(run_id, ProcessFileLock(RUNS_DIR / ".locks" / f"{run_id}.lock"))
 
 
 def save_run(run: StudioRun) -> StudioRun:
@@ -318,6 +315,50 @@ def generate_script_run(
             workflow = failed.workflow.transition(StudioRunStatus(operation.previous_status))
             return save_run(failed.model_copy(update={"status": operation.previous_status, "workflow": workflow,
                 "error": str(exc)[:2400], "authoring_operations": operations}))
+
+
+def recover_interrupted_authoring_operations(run_id: str) -> StudioRun:
+    """Safely recover persisted work from a terminated Studio process.
+
+    This is intentionally an explicit server-lifecycle operation, never a
+    browser-refresh behavior.  It never retries authoring or accepts a late
+    result from an interrupted operation.
+    """
+    with _run_lock(run_id):
+        run = get_run(run_id)
+        active = [item for item in run.authoring_operations if item.status == AuthoringOperationStatus.STARTED]
+        if not active:
+            return run
+        if run.workflow.status != StudioRunStatus.SCRIPT_GENERATING:
+            raise StudioWorkflowError("authoring operation recovery requires SCRIPT_GENERATING workflow state")
+        previous = active[-1].previous_status
+        try:
+            restored_status = StudioRunStatus(previous)
+            restored_workflow = run.workflow.transition(restored_status)
+        except ValueError as exc:
+            raise StudioWorkflowError("authoring operation has an invalid recovery state") from exc
+        if restored_status == StudioRunStatus.SCRIPT_APPROVED:
+            approved = run.workflow.current("script")
+            if (
+                approved is None
+                or run.approved_script_revision != approved.revision
+                or approved.approval.status != ApprovalStatus.APPROVED
+            ):
+                raise StudioWorkflowError("cannot restore SCRIPT_APPROVED without its recorded script approval")
+        operations = [
+            item.model_copy(update={
+                "status": AuthoringOperationStatus.INTERRUPTED,
+                "finished_at": _utcnow(),
+                "error": "Studio process ended before authoring completion; retry explicitly.",
+            }) if item.status == AuthoringOperationStatus.STARTED else item
+            for item in run.authoring_operations
+        ]
+        return save_run(run.model_copy(update={
+            "status": restored_status,
+            "workflow": restored_workflow,
+            "authoring_operations": operations,
+            "error": "Script authoring was interrupted; retry explicitly.",
+        }))
 
 
 def revise_script(run_id: str, package: ScriptPackage, *, expected_revision: int, expected_content_hash: str) -> StudioRun:

@@ -94,8 +94,19 @@ _TRANSITIONS: dict[StudioRunStatus, set[StudioRunStatus]] = {
     StudioRunStatus.REVIEW_REQUIRED: {StudioRunStatus.PRODUCING, StudioRunStatus.ASSEMBLING, StudioRunStatus.PAUSED},
     StudioRunStatus.ASSEMBLING: {StudioRunStatus.FINAL_QA, StudioRunStatus.PAUSED, StudioRunStatus.FAILED},
     StudioRunStatus.FINAL_QA: {StudioRunStatus.EXPORTED, StudioRunStatus.REVIEW_REQUIRED, StudioRunStatus.PAUSED, StudioRunStatus.FAILED},
-    StudioRunStatus.PAUSED: set(StudioRunStatus) - {StudioRunStatus.EXPORTED},
-    StudioRunStatus.FAILED: {StudioRunStatus.PAUSED},
+    # A paused run resumes only into a stage which can be independently
+    # revalidated by the service layer.  It must never become a shortcut around
+    # plan, production, or QA approvals.
+    StudioRunStatus.PAUSED: {
+        StudioRunStatus.BRIEF_RECEIVED,
+        StudioRunStatus.SCRIPT_REVIEW,
+        StudioRunStatus.SCRIPT_APPROVED,
+    },
+    StudioRunStatus.FAILED: {
+        StudioRunStatus.BRIEF_RECEIVED,
+        StudioRunStatus.SCRIPT_REVIEW,
+        StudioRunStatus.SCRIPT_APPROVED,
+    },
     StudioRunStatus.EXPORTED: set(),
 }
 
@@ -117,13 +128,26 @@ class ApprovalRecord(StrictModel):
         return self
 
 
+class ArtifactDependency(StrictModel):
+    """The exact artifact revision consumed by another artifact.
+
+    Old projects stored dependency IDs as strings.  Those records remain
+    readable through ``ArtifactRevision.depends_on``, but are intentionally not
+    approvable until a new revision records an exact source revision and hash.
+    """
+
+    artifact_id: str = Field(min_length=1, max_length=120)
+    revision: int = Field(ge=1)
+    content_hash: str = Field(min_length=64, max_length=64)
+
+
 class ArtifactRevision(StrictModel):
     artifact_id: str = Field(min_length=1, max_length=120)
     revision: int = Field(ge=1)
     created_at: datetime = Field(default_factory=utcnow)
     content_hash: str = Field(min_length=64, max_length=64)
     status: ArtifactStatus = ArtifactStatus.DRAFT
-    depends_on: list[str] = Field(default_factory=list)
+    depends_on: list[ArtifactDependency | str] = Field(default_factory=list)
     approval: ApprovalRecord = Field(default_factory=ApprovalRecord)
 
 
@@ -144,6 +168,7 @@ class WorkflowState(StrictModel):
         return revisions[-1] if revisions else None
 
     def append_revision(self, artifact: ArtifactRevision) -> "WorkflowState":
+        self._validate_dependency_shape(artifact)
         revisions = list(self.artifacts.get(artifact.artifact_id, []))
         if revisions and artifact.revision != revisions[-1].revision + 1:
             raise ValueError("artifact revisions must increment by exactly one")
@@ -157,11 +182,74 @@ class WorkflowState(StrictModel):
 
     def stale_dependents(self, dependency_id: str) -> "WorkflowState":
         artifacts = {key: list(value) for key, value in self.artifacts.items()}
-        for revisions in artifacts.values():
-            current = revisions[-1] if revisions else None
-            if current and dependency_id in current.depends_on and current.status == ArtifactStatus.APPROVED:
-                revisions[-1] = current.model_copy(update={"status": ArtifactStatus.STALE})
+        stale_ids = {dependency_id}
+        changed = True
+        while changed:
+            changed = False
+            for artifact_id, revisions in artifacts.items():
+                current = revisions[-1] if revisions else None
+                if (
+                    current
+                    and self._depends_on_any(current, stale_ids)
+                    and current.status in {ArtifactStatus.DRAFT, ArtifactStatus.APPROVED}
+                ):
+                    revisions[-1] = current.model_copy(update={"status": ArtifactStatus.STALE})
+                    if artifact_id not in stale_ids:
+                        stale_ids.add(artifact_id)
+                        changed = True
         return self.model_copy(update={"artifacts": artifacts})
+
+    def _depends_on_any(self, artifact: ArtifactRevision, artifact_ids: set[str]) -> bool:
+        for dependency in artifact.depends_on:
+            if isinstance(dependency, ArtifactDependency):
+                if dependency.artifact_id in artifact_ids:
+                    return True
+            # Legacy records can be invalidated safely, but never approved as
+            # if their source revision/hash had been verified.
+            elif dependency in artifact_ids:
+                return True
+        return False
+
+    def _validate_dependency_shape(self, artifact: ArtifactRevision) -> None:
+        """Reject cycles in the explicit dependency graph before persistence."""
+        typed_dependencies = [
+            dependency for dependency in artifact.depends_on if isinstance(dependency, ArtifactDependency)
+        ]
+        if any(dependency.artifact_id == artifact.artifact_id for dependency in typed_dependencies):
+            raise ValueError("an artifact cannot depend on itself")
+
+        def descendants(start_id: str, visited: set[str]) -> set[str]:
+            if start_id in visited:
+                return set()
+            visited.add(start_id)
+            current = self.current(start_id)
+            if current is None:
+                return set()
+            result: set[str] = set()
+            for dependency in current.depends_on:
+                if isinstance(dependency, ArtifactDependency):
+                    result.add(dependency.artifact_id)
+                    result.update(descendants(dependency.artifact_id, visited))
+            return result
+
+        for dependency in typed_dependencies:
+            if artifact.artifact_id in descendants(dependency.artifact_id, set()):
+                raise ValueError("artifact dependency cycle detected")
+
+    def _validate_current_dependencies(self, artifact: ArtifactRevision) -> None:
+        self._validate_dependency_shape(artifact)
+        for dependency in artifact.depends_on:
+            if isinstance(dependency, str):
+                raise ValueError(
+                    "legacy dependency records lack a revision and content hash; create a new dependent revision"
+                )
+            source = self.current(dependency.artifact_id)
+            if source is None:
+                raise ValueError(f"dependency does not exist: {dependency.artifact_id}")
+            if source.status != ArtifactStatus.APPROVED:
+                raise ValueError(f"dependency is not approved: {dependency.artifact_id}")
+            if source.revision != dependency.revision or source.content_hash != dependency.content_hash:
+                raise ValueError(f"dependency revision changed: {dependency.artifact_id}")
 
     def approve_current(
         self, artifact_id: str, *, expected_revision: int, expected_hash: str, approved_by: str
@@ -174,6 +262,7 @@ class WorkflowState(StrictModel):
             raise ValueError("only a current DRAFT artifact can be approved")
         if current.revision != expected_revision or current.content_hash != expected_hash:
             raise ValueError("artifact revision changed; reload before approving")
+        self._validate_current_dependencies(current)
         approved = current.model_copy(update={
             "status": ArtifactStatus.APPROVED,
             "approval": ApprovalRecord(

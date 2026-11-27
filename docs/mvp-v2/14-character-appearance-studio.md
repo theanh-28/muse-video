@@ -25,3 +25,5 @@ Submit and refresh endpoints now use an injected mock provider in tests or a sub
 The Appearance screen now renders validated completed-image previews, task state/errors, persisted submit/refresh actions, completed-only selection, and final reference approval. Browser interaction remains unverified; JavaScript syntax and backend regression tests passed.
 
 Before submission, the service now atomically claims the persisted intent under the run lock and revalidates its exact scope identity. A second click sees the claimed state and cannot issue another POST.
+
+Final reference approval now re-hashes the stored run-contained image and validates PNG dimensions or JPEG termination before accepting its persisted hash.

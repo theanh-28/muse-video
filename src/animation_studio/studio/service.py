@@ -436,7 +436,8 @@ def select_appearance_candidate(run_id: str, *, character_id: str, candidate_id:
 def approve_selected_appearance_candidate(run_id: str, *, character_id: str, expected_hash: str, approved_by: str) -> StudioRun:
     with _run_lock(run_id):
         return save_run(appearance_service.approve_selected_candidate(
-            get_run(run_id), character_id=character_id, expected_hash=expected_hash, approved_by=approved_by
+            get_run(run_id), character_id=character_id, expected_hash=expected_hash, approved_by=approved_by,
+            assets_root=RUNS_DIR / run_id / "appearance",
         ))
 
 

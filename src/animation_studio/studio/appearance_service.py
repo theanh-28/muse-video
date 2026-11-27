@@ -165,11 +165,19 @@ def complete_candidate_from_file(run: StudioRun, *, attempt_id: str, source: Pat
     return updated.model_copy(update={"asset_generation_attempts": attempts})
 
 
-def approve_selected_candidate(run: StudioRun, *, character_id: str, expected_hash: str, approved_by: str) -> StudioRun:
+def approve_selected_candidate(run: StudioRun, *, character_id: str, expected_hash: str, approved_by: str, assets_root: Path | None = None) -> StudioRun:
     spec = next((item for item in run.appearance_specs if item.character_id == character_id), None)
     candidate = next((item for item in (spec.candidates if spec else []) if item.candidate_id == spec.selected_candidate_id), None)
     if candidate is None or candidate.status != "COMPLETED" or candidate.content_hash != expected_hash:
         raise AppearanceError("selected candidate changed; reload before approving")
+    if assets_root is not None:
+        source = (assets_root / (candidate.image_path or "")).resolve()
+        if not source.is_relative_to(assets_root.resolve()) or not source.is_file():
+            raise AppearanceError("selected candidate image is unavailable")
+        actual_hash = file_content_hash(source)
+        if actual_hash != candidate.content_hash:
+            raise AppearanceError("selected candidate image bytes changed; regenerate or re-download it")
+        _validate_decodable_image(source)
     reference_id = f"appearance-reference:{character_id}:{uuid4().hex[:12]}"
     changed_candidate = candidate.model_copy(update={"status": "APPROVED"})
     changed_spec = spec.model_copy(update={"approved_candidate_id": candidate.candidate_id, "approved_reference_artifact_id": reference_id,
@@ -178,6 +186,17 @@ def approve_selected_candidate(run: StudioRun, *, character_id: str, expected_ha
         depends_on=[ArtifactDependency(artifact_id=f"appearance:{character_id}", revision=spec.revision, content_hash=run.workflow.current(f"appearance:{character_id}").content_hash)])
     workflow = run.workflow.append_revision(artifact).approve_current(reference_id, expected_revision=1, expected_hash=candidate.content_hash, approved_by=approved_by)
     return run.model_copy(update={"workflow": workflow, "appearance_specs": [changed_spec if item.character_id == character_id else item for item in run.appearance_specs]})
+
+
+def _validate_decodable_image(path: Path) -> None:
+    data = path.read_bytes()
+    if data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24 and data[12:16] == b"IHDR":
+        width, height = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+        if width > 0 and height > 0:
+            return
+    if data.startswith(b"\xff\xd8\xff") and b"\xff\xd9" in data[-64:]:
+        return
+    raise AppearanceError("selected candidate image cannot be decoded")
 
 
 def _update_candidate_for_attempt(run: StudioRun, attempt_id: str, **updates: object) -> StudioRun:

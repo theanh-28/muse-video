@@ -4,6 +4,7 @@ import pytest
 from animation_studio.core.workflow import StudioRunStatus
 from animation_studio.studio import service
 from animation_studio.studio import appearance_service
+from animation_studio.providers.base import ProviderTask
 from animation_studio.studio.models import StudioBrief
 from animation_studio.studio.scripts import DialogueLine, ScreenPresence, ScriptCharacter, ScriptPackage, SpeakerType, SpeechSource, StoryBeat
 
@@ -78,3 +79,20 @@ def test_completed_image_can_be_selected_and_approved_as_immutable_reference(tmp
     approved = appearance_service.approve_selected_candidate(selected, character_id="FOX", expected_hash=candidate.content_hash, approved_by="reviewer")
     assert approved.appearance_specs[0].approved_candidate_id == candidate.candidate_id
     assert approved.workflow.current(approved.appearance_specs[0].approved_reference_artifact_id).content_hash == candidate.content_hash
+
+
+def test_service_submits_existing_intent_with_its_stable_idempotency_key(tmp_path, monkeypatch):
+    class MockProvider:
+        def __init__(self): self.request = None
+        def submit_image(self, request): self.request = request; return ProviderTask(task_id="mock-task", status="queued", raw={})
+    monkeypatch.setattr(service, "RUNS_DIR", tmp_path / "runs")
+    package = _script(); monkeypatch.setattr(service, "complete_structured", lambda _p, _m: (package, None))
+    run = service.generate_script_run(service.create_run(StudioBrief(brief="A fox returns a lost letter to its owner today.")).run_id)
+    script = run.workflow.current("script"); run = service.approve_script(run.run_id, approved_by="r", expected_revision=script.revision, expected_content_hash=script.content_hash)
+    run = service.prepare_appearance(run.run_id); artifact = run.workflow.current("appearance:FOX")
+    run = service.approve_appearance_specification(run.run_id, character_id="FOX", expected_revision=artifact.revision, expected_content_hash=artifact.content_hash, approved_by="r")
+    run = service.approve_appearance_generation(run.run_id, character_id="FOX", expected_revision=artifact.revision, expected_content_hash=artifact.content_hash, request_limit=1, approved_by="r")
+    run = service.prepare_appearance_candidates(run.run_id, character_id="FOX", approval_id=run.asset_generation_approvals[0].approval_id, count=1)
+    provider = MockProvider(); submitted = service.submit_appearance_candidate(run.run_id, attempt_id=run.asset_generation_attempts[0].attempt_id, provider=provider)
+    assert provider.request.idempotency_key == run.asset_generation_attempts[0].attempt_id
+    assert submitted.asset_generation_attempts[0].provider_task_id == "mock-task"

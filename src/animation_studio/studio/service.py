@@ -84,6 +84,8 @@ from animation_studio.studio.models import (
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio import appearance_service
+from animation_studio.providers.muse2api import ImageRequest, Muse2ApiProvider
+from animation_studio.providers.base import ProviderError
 
 
 REPO_ROOT = Path(os.getenv("ANISTUDIO_HOME", REPO_ROOT)).resolve()
@@ -434,6 +436,33 @@ def approve_selected_appearance_candidate(run_id: str, *, character_id: str, exp
     with _run_lock(run_id):
         return save_run(appearance_service.approve_selected_candidate(
             get_run(run_id), character_id=character_id, expected_hash=expected_hash, approved_by=approved_by
+        ))
+
+
+def submit_appearance_candidate(run_id: str, *, attempt_id: str, provider: Muse2ApiProvider) -> StudioRun:
+    """Submit an already-persisted image intent exactly once."""
+    with _run_lock(run_id):
+        run = get_run(run_id)
+        attempt = appearance_service.attempt_for_submission(run, attempt_id)
+    try:
+        task = provider.submit_image(ImageRequest(
+            prompt=attempt.prompt, model=str(attempt.parameters.get("model", "muse-image")),
+            size=attempt.parameters.get("size"), idempotency_key=attempt.attempt_id,
+        ))
+    except ProviderError as exc:
+        with _run_lock(run_id):
+            current = get_run(run_id)
+            return save_run(appearance_service.record_unknown_candidate_submission(current, attempt_id=attempt_id, error=str(exc)))
+    with _run_lock(run_id):
+        current = get_run(run_id)
+        return save_run(appearance_service.record_submitted_candidate(current, attempt_id=attempt_id, provider_task_id=task.task_id))
+
+
+def finalize_appearance_candidate(run_id: str, *, attempt_id: str, source: Path) -> StudioRun:
+    with _run_lock(run_id):
+        run = get_run(run_id)
+        return save_run(appearance_service.complete_candidate_from_file(
+            run, attempt_id=attempt_id, source=source, assets_root=RUNS_DIR / run_id / "appearance"
         ))
 
 

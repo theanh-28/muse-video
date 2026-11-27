@@ -123,6 +123,15 @@ def record_unknown_candidate_submission(run: StudioRun, *, attempt_id: str, erro
     return mark_submission_unknown(run, attempt_id=attempt_id, error=error)
 
 
+def attempt_for_submission(run: StudioRun, attempt_id: str):
+    attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
+    if attempt is None or attempt.status != ProviderJobState.SUBMISSION_INTENDED:
+        raise AppearanceError("only a persisted submission intent may be sent")
+    if attempt.operation_type != "IMAGE":
+        raise AppearanceError("attempt is not an image request")
+    return attempt
+
+
 def complete_candidate_from_file(run: StudioRun, *, attempt_id: str, source: Path, assets_root: Path) -> StudioRun:
     attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
     if attempt is None or attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:

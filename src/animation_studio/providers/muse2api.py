@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from dataclasses import dataclass
 from urllib.parse import urljoin, urlsplit
 
 from animation_studio.providers.base import (
@@ -183,6 +184,39 @@ class Muse2ApiProvider:
             raise ProviderError("Muse2API response did not contain a task ID")
         return ProviderTask(task_id=task_id, status=str(data.get("status", "queued")), raw=data)
 
+    def submit_image(self, request: ImageRequest) -> ProviderTask:
+        """Submit exactly one asynchronous image task; callers persist intent first."""
+        if not self.submission_enabled:
+            raise ProviderNotReady("Muse2API image submission is disabled until an approved appearance scope enables it")
+        if not request.prompt.strip() or not request.idempotency_key:
+            raise ProviderError("Image prompt and idempotency key are required")
+        payload = {"prompt": request.prompt, "model": request.model, "n": 1, "size": request.size, "response_format": "url"}
+        try:
+            with self._client() as client:
+                response = client.post(f"{self.base_url}/images/tasks", json=payload,
+                                       headers={"Idempotency-Key": request.idempotency_key})
+        except Exception as exc:
+            raise ProviderError(f"Muse2API image submission outcome is uncertain; do not resubmit automatically ({type(exc).__name__})") from exc
+        try:
+            response.raise_for_status(); data = response.json()
+        except Exception as exc:
+            raise ProviderError("Muse2API returned an invalid image task response") from exc
+        task_id = data.get("id") or data.get("task_id")
+        if not isinstance(task_id, str) or not task_id:
+            raise ProviderError("Muse2API image response did not contain a task ID")
+        return ProviderTask(task_id=task_id, status=str(data.get("status", "queued")), raw=data)
+
+    def get_image_task(self, task_id: str) -> ProviderTask:
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", task_id):
+            raise ProviderError("Invalid image task ID")
+        try:
+            with self._client() as client:
+                response = client.get(f"{self.base_url}/images/tasks/{task_id}")
+            response.raise_for_status(); data = response.json()
+        except Exception as exc:
+            raise ProviderError(f"Muse2API image task polling failed ({type(exc).__name__})") from exc
+        return ProviderTask(task_id=task_id, status=str(data.get("status", "unknown")), raw=data)
+
     def get_task(self, task_id: str) -> ProviderTask:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", task_id):
             raise ProviderError("Invalid task ID")
@@ -244,4 +278,11 @@ class Muse2ApiProvider:
             if temp.exists():
                 temp.unlink()
             raise
+
+@dataclass(frozen=True)
+class ImageRequest:
+    prompt: str
+    size: str | None = None
+    model: str = "muse-image"
+    idempotency_key: str = ""
 

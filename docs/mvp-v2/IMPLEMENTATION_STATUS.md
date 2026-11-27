@@ -8,3 +8,7 @@
 | M3–M9 | NOT_STARTED | Directive scope | No live provider calls made |
 
 Last verified test result after M1/M2: 46 passed, 1 warning. Update this file at every subsequent milestone.
+
+## Directive 004 delivery note
+
+The legacy CLI `auto` command is intentionally disabled until the approved-assets orchestrator exists. This prevents it from bypassing the required Script Review approval gate after the Studio authoring workflow changed to `SCRIPT_REVIEW`.

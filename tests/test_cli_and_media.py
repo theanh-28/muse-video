@@ -18,6 +18,12 @@ from animation_studio.storage.files import dump_model, load_model
 runner = CliRunner()
 
 
+def test_auto_command_is_disabled_until_approved_assets_orchestrator_exists():
+    result = runner.invoke(app, ["auto", "A production brief that is long enough to be valid."])
+    assert result.exit_code != 0
+    assert "Auto-Pilot is disabled" in result.output
+
+
 def _remote_queue(tmp_path):
     assert runner.invoke(app, ["project", "init", str(tmp_path)]).exit_code == 0
     assert runner.invoke(app, ["episode", "init", "EP001", "--project-dir", str(tmp_path)]).exit_code == 0

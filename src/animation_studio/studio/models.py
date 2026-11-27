@@ -356,6 +356,43 @@ class AppearanceAttemptRequest(BaseModel):
     attempt_id: str = Field(min_length=1, max_length=80)
 
 
+class MuseVoiceSample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sample_id: str = Field(min_length=1, max_length=80)
+    profile_revision: int = Field(ge=1)
+    profile_hash: str = Field(min_length=64, max_length=64)
+    line_id: str = Field(min_length=1, max_length=120)
+    exact_text: str = Field(min_length=1, max_length=4000)
+    status: Literal["PLANNED", "COMPLETED", "FAILED", "APPROVED"] = "PLANNED"
+    attempt_id: str | None = None
+    video_path: str | None = None
+    video_hash: str | None = None
+    audio_path: str | None = None
+    audio_hash: str | None = None
+
+
+class MuseVoiceProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    character_name: str = Field(min_length=1, max_length=240)
+    revision: int = Field(ge=1)
+    language: str = Field(min_length=2, max_length=20)
+    accent: str = Field(default="", max_length=240)
+    perceived_age_range: str = Field(default="", max_length=240)
+    pitch: str = Field(default="", max_length=240)
+    timbre: str = Field(default="", max_length=500)
+    articulation: str = Field(default="", max_length=500)
+    normal_pacing: str = Field(default="", max_length=500)
+    distinctive_speaking_characteristics: str = Field(default="", max_length=1000)
+    canonical_voice_description: str = Field(min_length=1, max_length=2000)
+    source_script_revision: int = Field(ge=1)
+    source_script_hash: str = Field(min_length=64, max_length=64)
+    appearance_reference_artifact_id: str | None = None
+    samples: list[MuseVoiceSample] = Field(default_factory=list)
+    selected_sample_id: str | None = None
+    approved_voice_artifact_id: str | None = None
+
+
 class ContinuityReviewAcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -378,6 +415,8 @@ class StudioRun(BaseModel):
     asset_generation_attempts: list[AssetGenerationAttempt] = Field(default_factory=list)
     appearance_specs: list[AppearanceSpec] = Field(default_factory=list)
     appearance_spec_history: list[AppearanceSpec] = Field(default_factory=list)
+    muse_voice_profiles: list[MuseVoiceProfile] = Field(default_factory=list)
+    muse_voice_profile_history: list[MuseVoiceProfile] = Field(default_factory=list)
     analysis: CreativePackage | None = None
     project_dir: str | None = None
     deferred_shots: list[str] = Field(default_factory=list)

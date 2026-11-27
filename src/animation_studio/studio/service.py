@@ -85,6 +85,7 @@ from animation_studio.studio.models import (
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio import appearance_service
+from animation_studio.studio import voice_service
 from animation_studio.providers.muse2api import ImageRequest, Muse2ApiProvider
 from animation_studio.providers.base import ProviderError
 
@@ -513,6 +514,11 @@ def refresh_appearance_candidate(run_id: str, *, attempt_id: str, provider: Muse
     except (ProviderError, ValueError, OSError) as exc:
         with _run_lock(run_id):
             return save_run(appearance_service.record_candidate_failure(get_run(run_id), attempt_id=attempt_id, error=str(exc)))
+
+
+def prepare_muse_voices(run_id: str) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(voice_service.prepare_muse_voice_profiles(get_run(run_id)))
 
 
 def _build_analysis_prompt(brief: StudioBrief) -> str:

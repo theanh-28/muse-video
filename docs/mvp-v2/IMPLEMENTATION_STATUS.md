@@ -7,7 +7,7 @@
 | M2 script authoring | PARTIAL | `studio/scripts.py`, Script Studio UI, service/API tests | Brief, review, edit, feedback, history and approval UI implemented; browser automation/live authoring remain unverified |
 | M3–M9 | NOT_STARTED | Directive scope | No live provider calls made |
 
-Last verified full regression: 65 passed, 1 third-party `starlette.testclient` deprecation warning. Skill validation passed for all 8 project-local skills. No live provider request was made.
+Last verified full regression: 70 passed, 1 third-party `starlette.testclient` deprecation warning. Skill validation passed for all 8 project-local skills. No live provider request was made.
 
 ## Character Appearance delivery note
 
@@ -22,3 +22,7 @@ The legacy CLI `auto` command is intentionally disabled until the approved-asset
 Character Appearance remains PARTIAL. Completed work is limited to safety-integrated appearance preparation: canonical request-scope fingerprints, persisted pre-POST claims, unknown-outcome overlap blocking, full Pillow image decoding, synchronized asset-preparation status, and revision-safe specification edits. Deterministic targeted regression passed 15 tests. Voice Studio, Kokoro, the final asset bundle, full six-image API acceptance, and browser acceptance are not yet implemented.
 
 Appearance now has an offline full six-image API acceptance fixture using a fake Muse provider, including persisted claims, nonterminal polling, decoded candidate previews, reference approvals, and reload verification. Remaining Appearance work is structured authoring and browser verification; Voice Studio and asset bundle work remain unimplemented.
+
+## Directive 005 recovery checkpoint (2026-11-27)
+
+Interrupted WIP adds only the initial, unapproved Muse character-voice profile preparation slice: run-model persistence, `voice_service.prepare_muse_voice_profiles`, and a guarded preparation endpoint. It has no Studio UI, no automated tests, no sample submission/polling/download/approval lifecycle, no ASSETS_APPROVED transition, and no Kokoro narrator implementation. It is preserved for technical review rather than marked complete. See `25-directive-005-handoff-2026-11-27.md` for the exact source state and verification evidence.

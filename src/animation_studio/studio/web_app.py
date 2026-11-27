@@ -59,6 +59,7 @@ from animation_studio.studio.service import (
     approve_selected_appearance_candidate,
     submit_appearance_candidate,
     refresh_appearance_candidate,
+    prepare_muse_voices,
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
@@ -295,6 +296,10 @@ def create_app() -> FastAPI:
     @app.post("/api/runs/{run_id}/appearance/refresh")
     async def refresh_appearance(run_id: str, payload: AppearanceAttemptRequest):
         return _public(await asyncio.to_thread(refresh_appearance_candidate, run_id, attempt_id=payload.attempt_id, provider=appearance_provider()))
+
+    @app.post("/api/runs/{run_id}/voice/muse/prepare")
+    async def prepare_muse_voice_profiles(run_id: str):
+        return _public(await asyncio.to_thread(prepare_muse_voices, run_id))
 
     @app.post("/api/runs/{run_id}/manifest")
     async def make_manifest(run_id: str, payload: GenerationPlanRequest):

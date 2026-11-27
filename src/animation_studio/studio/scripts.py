@@ -37,11 +37,13 @@ class DialogueLine(StrictModel):
 
     @model_validator(mode="after")
     def source_matches_role(self) -> "DialogueLine":
+        if not self.exact_text.strip():
+            raise ValueError("exact_text must not be blank")
         if self.speaker_type == SpeakerType.NARRATOR:
             if self.speech_source != SpeechSource.KOKORO or self.screen_presence != ScreenPresence.NOT_APPLICABLE:
                 raise ValueError("narration must use KOKORO and NOT_APPLICABLE screen presence")
-        elif self.speech_source != SpeechSource.MUSE:
-            raise ValueError("character speech must use MUSE")
+        elif self.speech_source != SpeechSource.MUSE or self.screen_presence == ScreenPresence.NOT_APPLICABLE:
+            raise ValueError("character speech must use MUSE and be ON_SCREEN or OFF_SCREEN")
         return self
 
 
@@ -75,6 +77,12 @@ class ScriptPackage(StrictModel):
 
     @model_validator(mode="after")
     def unique_script_ids_and_speakers(self) -> "ScriptPackage":
+        character_values = [character.character_id for character in self.characters]
+        if len(character_values) != len(set(character_values)):
+            raise ValueError("character_id values must be unique")
+        beat_ids = [beat.beat_id for beat in self.story_beats]
+        if len(beat_ids) != len(set(beat_ids)):
+            raise ValueError("story beat_id values must be unique")
         line_ids = [line.line_id for line in self.dialogue]
         if len(line_ids) != len(set(line_ids)):
             raise ValueError("dialogue line_id values must be unique")

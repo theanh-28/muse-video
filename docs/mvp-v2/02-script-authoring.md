@@ -18,3 +18,5 @@ Each revision receives stable `script` identity, sequential revision number, tim
 The early timing guard rejects dialogue whose word count exceeds four words/second across the requested duration. This is a conservative warning gate, not measured narration duration; measured audio is deferred to M4. No Muse call is reachable in this stage.
 
 Tests cover script revision history, exact source contracts, approval persistence, and invalid repeated approval. Known limitations: the existing M8 UI has not yet added a Script Review screen; these backend APIs are usable but not a complete M8 UI. No live AI/provider request was made.
+
+Validation also rejects blank dialogue text, duplicate character/beat/dialogue IDs, and character dialogue marked `NOT_APPLICABLE` on screen. It preserves exact user text rather than trimming or rewriting it.

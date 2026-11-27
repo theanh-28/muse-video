@@ -58,6 +58,17 @@ def test_narrator_contract_rejects_muse_or_screen_presence():
         )
 
 
+def test_character_dialogue_rejects_not_applicable_screen_presence_and_blank_text():
+    with pytest.raises(ValueError, match="ON_SCREEN or OFF_SCREEN"):
+        DialogueLine(line_id="LINE_002", speaker_id="FOX", exact_text="Hello", language="en", emotion="calm",
+                     delivery_notes="plain", speaker_type=SpeakerType.CHARACTER, speech_source=SpeechSource.MUSE,
+                     screen_presence=ScreenPresence.NOT_APPLICABLE)
+    with pytest.raises(ValueError, match="must not be blank"):
+        DialogueLine(line_id="LINE_003", speaker_id="FOX", exact_text="   ", language="en", emotion="calm",
+                     delivery_notes="plain", speaker_type=SpeakerType.CHARACTER, speech_source=SpeechSource.MUSE,
+                     screen_presence=ScreenPresence.ON_SCREEN)
+
+
 def test_script_revision_and_approval_are_persisted_without_overwrite(tmp_path, monkeypatch):
     monkeypatch.setattr(service, "RUNS_DIR", tmp_path / "runs")
     run = service.create_run(StudioBrief(brief="A fox returns a lost letter to its owner."))

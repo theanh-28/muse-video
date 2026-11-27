@@ -111,6 +111,7 @@
   }
 
   function renderRun(run, quiet=false) {
+    if (window.ScriptStudio?.handles(run)) { window.ScriptStudio.render(run); return; }
     const view=$("run-view"); const p=run.analysis; const hasPlan=!!p;
     $("page-title").textContent=p?.project_title||run.brief.title_hint||"Đang tạo dự án";
     updateStepper(run.status, Boolean(run.youtube_metadata_summary));

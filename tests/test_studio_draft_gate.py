@@ -87,3 +87,18 @@ def test_script_studio_asset_exposes_revision_bound_mutations(draft_client):
     assert "expected_revision" in response.text
     assert "expected_content_hash" in response.text
     assert "document.querySelectorAll('.script-actions button')" in response.text
+
+
+def test_initial_script_retry_uses_existing_run(draft_client, monkeypatch):
+    client, calls, _tmp_path = draft_client
+    run = service.create_run(StudioBrief(brief="A small fox finds a lost letter and returns it home."))
+
+    def retry(run_id):
+        calls["analysis"] += 1
+        return service.save_run(service.get_run(run_id).model_copy(update={"status": "SCRIPT_REVIEW"}))
+
+    monkeypatch.setattr(web_app, "generate_script_run", retry)
+    response = client.post(f"/api/runs/{run.run_id}/script/retry")
+    assert response.status_code == 200, response.text
+    assert response.json()["run_id"] == run.run_id
+    assert calls["analysis"] == 1

@@ -206,6 +206,11 @@ def create_app() -> FastAPI:
             expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
         ))
 
+    @app.post("/api/runs/{run_id}/script/retry")
+    async def retry_initial_script(run_id: str):
+        """Explicitly retry a failed initial authoring operation on the same run."""
+        return _public(await asyncio.to_thread(generate_script_run, run_id))
+
     @app.post("/api/runs/{run_id}/approve-script")
     async def approve_script_revision(run_id: str, payload: ScriptApprovalRequest):
         return _public(await asyncio.to_thread(

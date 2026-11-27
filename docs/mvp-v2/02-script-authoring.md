@@ -20,3 +20,5 @@ The early timing guard rejects dialogue whose word count exceeds four words/seco
 Tests cover script revision history, exact source contracts, approval persistence, and invalid repeated approval. Known limitations: the existing M8 UI has not yet added a Script Review screen; these backend APIs are usable but not a complete M8 UI. No live AI/provider request was made.
 
 Validation also rejects blank dialogue text, duplicate character/beat/dialogue IDs, and character dialogue marked `NOT_APPLICABLE` on screen. It preserves exact user text rather than trimming or rewriting it.
+
+Feedback authoring receives the complete current `ScriptPackage`, its content hash, the original brief, and feedback. An approved script can be reopened into a new draft revision; the prior approval remains historical and the new revision requires a new approval.

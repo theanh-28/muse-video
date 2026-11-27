@@ -184,7 +184,8 @@ def create_run(brief: StudioBrief) -> StudioRun:
     return save_run(run)
 
 
-def _script_prompt(brief: StudioBrief, feedback: str = "") -> str:
+def _script_prompt(brief: StudioBrief, feedback: str = "", current_script: ScriptPackage | None = None,
+                   current_hash: str | None = None) -> str:
     rules = project_authoring_context("script")
     return f"""You are developing a DRAFT script only. Return the ScriptPackage JSON schema.
 Do not create a storyboard, shot list, visual bible, prompt, provider request, or media file.
@@ -199,6 +200,10 @@ for comedy and an emotional turning point for emotional stories only when releva
 
 BRIEF:\n{brief.brief}\n
 FEEDBACK (creative content only):\n{feedback or '(none)'}\n
+CURRENT REVIEWED SCRIPT (JSON; preserve unrelated content, exact dialogue, and stable IDs unless feedback requests a change):
+{current_script.model_dump_json(indent=2) if current_script else '(initial authoring; no previous script)'}
+CURRENT SCRIPT HASH: {current_hash or '(none)'}
+
 PROJECT CONTEXT:\n{rules}"""
 
 
@@ -239,13 +244,18 @@ def generate_script_run(
     run_id: str, *, feedback: str = "", expected_revision: int | None = None, expected_content_hash: str | None = None
 ) -> StudioRun:
     """Generate a script DRAFT; never builds a storyboard or calls a media provider."""
-    run = get_run(run_id)
-    if run.workflow.status not in {StudioRunStatus.BRIEF_RECEIVED, StudioRunStatus.SCRIPT_REVIEW}:
-        raise StudioWorkflowError("Script generation is not available in the current workflow state")
-    generating = run.workflow.transition(StudioRunStatus.SCRIPT_GENERATING)
-    save_run(run.model_copy(update={"status": StudioRunStatus.SCRIPT_GENERATING, "workflow": generating, "error": None}))
+    with _run_lock(run_id):
+        run = get_run(run_id)
+        if run.workflow.status not in {StudioRunStatus.BRIEF_RECEIVED, StudioRunStatus.SCRIPT_REVIEW, StudioRunStatus.SCRIPT_APPROVED}:
+            raise StudioWorkflowError("Script generation is not available in the current workflow state")
+        current = run.workflow.current("script")
+        if expected_revision is not None and (current is None or current.revision != expected_revision or current.content_hash != expected_content_hash):
+            raise StudioWorkflowError("Script revision changed; reload before requesting feedback")
+        generating = run.workflow.transition(StudioRunStatus.SCRIPT_GENERATING)
+        run = save_run(run.model_copy(update={"status": StudioRunStatus.SCRIPT_GENERATING, "workflow": generating, "error": None}))
     try:
-        package, usage = complete_structured(_script_prompt(run.brief, feedback), ScriptPackage)
+        package, usage = complete_structured(_script_prompt(run.brief, feedback, run.script_revisions[-1] if feedback else None,
+                                                            current.content_hash if feedback and current else None), ScriptPackage)
         with _run_lock(run_id):
             current = get_run(run_id)
             current_artifact = current.workflow.current("script")
@@ -268,7 +278,7 @@ def generate_script_run(
 def revise_script(run_id: str, package: ScriptPackage, *, expected_revision: int, expected_content_hash: str) -> StudioRun:
     with _run_lock(run_id):
         run = get_run(run_id)
-        if run.workflow.status != StudioRunStatus.SCRIPT_REVIEW:
+        if run.workflow.status not in {StudioRunStatus.SCRIPT_REVIEW, StudioRunStatus.SCRIPT_APPROVED}:
             raise StudioWorkflowError("A script can only be edited while it is in review")
         current = run.workflow.current("script")
         if current is None or current.revision != expected_revision or current.content_hash != expected_content_hash:

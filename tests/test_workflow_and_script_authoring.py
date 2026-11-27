@@ -105,3 +105,12 @@ def test_stale_script_client_cannot_save_or_approve(tmp_path, monkeypatch):
     service.revise_script(run.run_id, _script("A newer script."), expected_revision=stale.revision, expected_content_hash=stale.content_hash)
     with pytest.raises(service.StudioWorkflowError, match="changed"):
         service.approve_script(run.run_id, approved_by="reviewer", expected_revision=stale.revision, expected_content_hash=stale.content_hash)
+
+
+def test_feedback_prompt_contains_the_reviewed_script():
+    package = _script("Keep this exact line.")
+    prompt = service._script_prompt(StudioBrief(brief="A fox returns a lost letter to its owner."), "Change the ending.", package, "a" * 64)
+    assert "Keep this exact line." in prompt
+    assert "Change the ending." in prompt
+    assert "a" * 64 in prompt
+    assert "preserve unrelated content" in prompt

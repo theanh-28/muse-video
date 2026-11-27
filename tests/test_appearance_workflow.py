@@ -96,3 +96,24 @@ def test_service_submits_existing_intent_with_its_stable_idempotency_key(tmp_pat
     provider = MockProvider(); submitted = service.submit_appearance_candidate(run.run_id, attempt_id=run.asset_generation_attempts[0].attempt_id, provider=provider)
     assert provider.request.idempotency_key == run.asset_generation_attempts[0].attempt_id
     assert submitted.asset_generation_attempts[0].provider_task_id == "mock-task"
+
+
+def test_two_character_six_intent_scopes_preserve_request_limits(tmp_path, monkeypatch):
+    monkeypatch.setattr(service, "RUNS_DIR", tmp_path / "runs")
+    package = _script().model_copy(update={"characters": [
+        *_script().characters,
+        _script().characters[0].model_copy(update={"character_id":"OTTER", "name":"Otter"}),
+    ]})
+    monkeypatch.setattr(service, "complete_structured", lambda _p, _m: (package, None))
+    run = service.generate_script_run(service.create_run(StudioBrief(brief="A fox and otter return a lost letter to their owner.")).run_id)
+    script=run.workflow.current("script"); run=service.approve_script(run.run_id,approved_by="r",expected_revision=script.revision,expected_content_hash=script.content_hash)
+    run=service.prepare_appearance(run.run_id)
+    for spec in run.appearance_specs:
+        art=run.workflow.current(f"appearance:{spec.character_id}")
+        run=service.approve_appearance_specification(run.run_id,character_id=spec.character_id,expected_revision=art.revision,expected_content_hash=art.content_hash,approved_by="r")
+        run=service.approve_appearance_generation(run.run_id,character_id=spec.character_id,expected_revision=art.revision,expected_content_hash=art.content_hash,request_limit=3,approved_by="r")
+    for approval in run.asset_generation_approvals:
+        character_id=approval.target_artifact_id.split(":",1)[1]
+        run=service.prepare_appearance_candidates(run.run_id,character_id=character_id,approval_id=approval.approval_id,count=3)
+    assert len(run.asset_generation_attempts)==6
+    assert all(item.reserved_requests==3 for item in run.asset_generation_approvals)

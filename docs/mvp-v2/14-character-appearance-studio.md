@@ -27,3 +27,5 @@ The Appearance screen now renders validated completed-image previews, task state
 Before submission, the service now atomically claims the persisted intent under the run lock and revalidates its exact scope identity. A second click sees the claimed state and cannot issue another POST.
 
 Final reference approval now re-hashes the stored run-contained image and validates PNG dimensions or JPEG termination before accepting its persisted hash.
+
+The offline two-character fixture verifies that two independently approved scopes reserve exactly six image intents and cannot exceed either three-request limit.

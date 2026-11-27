@@ -521,6 +521,17 @@ def prepare_muse_voices(run_id: str) -> StudioRun:
         return save_run(voice_service.prepare_muse_voice_profiles(get_run(run_id)))
 
 
+def edit_muse_voice(run_id: str, **payload: object) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(voice_service.edit_muse_voice_profile(get_run(run_id), **payload))
+
+
+def approve_muse_voice(run_id: str, *, character_id: str, expected_revision: int, expected_content_hash: str, approved_by: str) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(voice_service.approve_muse_voice_profile(get_run(run_id), character_id=character_id,
+            expected_revision=expected_revision, expected_hash=expected_content_hash, approved_by=approved_by))
+
+
 def _build_analysis_prompt(brief: StudioBrief) -> str:
     rules = project_authoring_context("storyboard")
     return f"""You are Codex acting as an animation director and senior production engineer.

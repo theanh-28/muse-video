@@ -29,6 +29,8 @@ from animation_studio.studio.models import (
     AppearanceReferenceApprovalRequest,
     AppearanceAttemptRequest,
     AppearanceEditRequest,
+    MuseVoiceEditRequest,
+    MuseVoiceApprovalRequest,
 )
 from animation_studio.studio.service import (
     RUNS_DIR,
@@ -60,6 +62,8 @@ from animation_studio.studio.service import (
     submit_appearance_candidate,
     refresh_appearance_candidate,
     prepare_muse_voices,
+    edit_muse_voice,
+    approve_muse_voice,
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
@@ -300,6 +304,14 @@ def create_app() -> FastAPI:
     @app.post("/api/runs/{run_id}/voice/muse/prepare")
     async def prepare_muse_voice_profiles(run_id: str):
         return _public(await asyncio.to_thread(prepare_muse_voices, run_id))
+
+    @app.put("/api/runs/{run_id}/voice/muse/profile")
+    async def edit_muse_voice_profile(run_id: str, payload: MuseVoiceEditRequest):
+        return _public(await asyncio.to_thread(edit_muse_voice, run_id, **payload.model_dump()))
+
+    @app.post("/api/runs/{run_id}/voice/muse/profile/approve")
+    async def approve_muse_voice_profile(run_id: str, payload: MuseVoiceApprovalRequest):
+        return _public(await asyncio.to_thread(approve_muse_voice, run_id, **payload.model_dump()))
 
     @app.post("/api/runs/{run_id}/manifest")
     async def make_manifest(run_id: str, payload: GenerationPlanRequest):

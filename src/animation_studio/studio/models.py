@@ -369,6 +369,22 @@ class MuseVoiceSample(BaseModel):
     video_hash: str | None = None
     audio_path: str | None = None
     audio_hash: str | None = None
+    character_id: str | None = None
+    source_script_revision: int | None = Field(default=None, ge=1)
+    source_script_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    language: str | None = None
+    emotion: str = ""
+    delivery_notes: str = ""
+    screen_presence: str | None = None
+    appearance_reference_artifact_id: str | None = None
+    appearance_reference_revision: int | None = Field(default=None, ge=1)
+    appearance_reference_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    requested_duration_seconds: int | None = Field(default=None, ge=1, le=10)
+    actual_video_duration_seconds: float | None = Field(default=None, gt=0)
+    actual_audio_duration_seconds: float | None = Field(default=None, gt=0)
+    audio_metadata: dict[str, object] = Field(default_factory=dict)
+    error: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class MuseVoiceProfile(BaseModel):
@@ -388,9 +404,34 @@ class MuseVoiceProfile(BaseModel):
     source_script_revision: int = Field(ge=1)
     source_script_hash: str = Field(min_length=64, max_length=64)
     appearance_reference_artifact_id: str | None = None
+    appearance_reference_revision: int | None = Field(default=None, ge=1)
+    appearance_reference_hash: str | None = Field(default=None, min_length=64, max_length=64)
     samples: list[MuseVoiceSample] = Field(default_factory=list)
     selected_sample_id: str | None = None
     approved_voice_artifact_id: str | None = None
+
+
+class MuseVoiceEditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
+    canonical_voice_description: str = Field(min_length=1, max_length=2000)
+    accent: str = Field(default="", max_length=240)
+    perceived_age_range: str = Field(default="", max_length=240)
+    pitch: str = Field(default="", max_length=240)
+    timbre: str = Field(default="", max_length=500)
+    articulation: str = Field(default="", max_length=500)
+    normal_pacing: str = Field(default="", max_length=500)
+    distinctive_speaking_characteristics: str = Field(default="", max_length=1000)
+
+
+class MuseVoiceApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
+    approved_by: str = Field(min_length=1, max_length=120)
 
 
 class ContinuityReviewAcceptRequest(BaseModel):

@@ -197,7 +197,13 @@ def claim_candidate_submission(run: StudioRun, *, attempt_id: str) -> tuple[Stud
 
 def complete_candidate_from_file(run: StudioRun, *, attempt_id: str, source: Path, assets_root: Path) -> StudioRun:
     attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
-    if attempt is None or attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:
+    if attempt is None:
+        raise AppearanceError("candidate attempt is not ready for a downloaded result")
+    if attempt.status == ProviderJobState.SUCCEEDED:
+        # A duplicate poll may download after another worker has finalized.  It
+        # must be idempotent rather than converting a successful result to FAIL.
+        return run
+    if attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:
         raise AppearanceError("candidate attempt is not ready for a downloaded result")
     image_info = _validate_decodable_image(source)
     extension = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp", "GIF": ".gif"}[image_info["format"]]
@@ -264,19 +270,31 @@ def _validate_decodable_image(path: Path) -> dict[str, object]:
 
 
 def _update_candidate_for_attempt(run: StudioRun, attempt_id: str, **updates: object) -> StudioRun:
-    changed = False; specs = []
-    for spec in run.appearance_specs:
-        candidates = []
-        for candidate in spec.candidates:
-            if candidate.attempt_id == attempt_id:
-                candidates.append(candidate.model_copy(update=updates)); changed = True
-            else: candidates.append(candidate)
-        specs.append(spec.model_copy(update={"candidates": candidates}))
+    """Update the original revision too when a late task became historical."""
+    changed = False
+    def update_specs(source: list[AppearanceSpec]) -> list[AppearanceSpec]:
+        nonlocal changed
+        specs = []
+        for spec in source:
+            candidates = []
+            for candidate in spec.candidates:
+                if candidate.attempt_id == attempt_id:
+                    candidates.append(candidate.model_copy(update=updates)); changed = True
+                else: candidates.append(candidate)
+            specs.append(spec.model_copy(update={"candidates": candidates}))
+        return specs
+    current_specs = update_specs(run.appearance_specs)
+    history_specs = update_specs(run.appearance_spec_history)
     if not changed: raise AppearanceError("candidate for attempt does not exist")
-    return run.model_copy(update={"appearance_specs": specs})
+    return run.model_copy(update={"appearance_specs": current_specs, "appearance_spec_history": history_specs})
 
 
 def record_candidate_failure(run: StudioRun, *, attempt_id: str, error: str) -> StudioRun:
+    existing = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
+    if existing is None:
+        raise AppearanceError("candidate attempt does not exist")
+    if existing.status == ProviderJobState.SUCCEEDED:
+        return run
     attempts = [
         item.model_copy(update={"status": ProviderJobState.FAILED, "error": error[:2400]}) if item.attempt_id == attempt_id else item
         for item in run.asset_generation_attempts
@@ -285,6 +303,11 @@ def record_candidate_failure(run: StudioRun, *, attempt_id: str, error: str) -> 
 
 
 def record_candidate_running(run: StudioRun, *, attempt_id: str) -> StudioRun:
+    existing = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
+    if existing is None:
+        raise AppearanceError("candidate attempt does not exist")
+    if existing.status in {ProviderJobState.SUCCEEDED, ProviderJobState.FAILED}:
+        return run
     attempts = [
         item.model_copy(update={"status": ProviderJobState.RUNNING}) if item.attempt_id == attempt_id else item
         for item in run.asset_generation_attempts

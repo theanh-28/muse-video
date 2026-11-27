@@ -26,3 +26,7 @@ Appearance now has an offline full six-image API acceptance fixture using a fake
 ## Directive 005 recovery checkpoint (2026-11-27)
 
 Interrupted WIP adds only the initial, unapproved Muse character-voice profile preparation slice: run-model persistence, `voice_service.prepare_muse_voice_profiles`, and a guarded preparation endpoint. It has no Studio UI, no automated tests, no sample submission/polling/download/approval lifecycle, no ASSETS_APPROVED transition, and no Kokoro narrator implementation. It is preserved for technical review rather than marked complete. See `25-directive-005-handoff-2026-11-27.md` for the exact source state and verification evidence.
+
+## Directive 005 continuation 02 (in progress)
+
+Appearance candidate rendering now treats candidate lifecycle and provider-attempt progress as separate state machines: a valid `COMPLETED` candidate remains selectable when its transport attempt is `SUCCEEDED`. Polling does not re-render a dirty appearance text field, and duplicate finalization/failure updates preserve an already successful attempt. Voice profile preparation now validates the exact approved script payload, produces deterministic speaker order, requires a valid main-character appearance dependency, and hashes immutable voice identity separately from samples. Profile editing/approval endpoints are present. Muse sample generation, Kokoro, asset-bundle approval, frontend Voice Studio, and their acceptance tests remain incomplete; this is not a completed Directive 005 milestone.

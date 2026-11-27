@@ -12,13 +12,27 @@
   const artifact = (run, id) => run.workflow?.artifacts?.[`appearance:${id}`]?.at(-1);
   const dirty = new Set();
   const renderAppearance = run => {
+    // The shell polls every few seconds.  Never replace a user's unsaved form
+    // with a poll response; a successful mutation clears this key first.
+    if ([...dirty].some(key => key.startsWith(`${run.run_id}:`))) return;
     const root = document.getElementById('run-view');
     const cards = (run.appearance_specs || []).map(spec => {
       const current = artifact(run, spec.character_id);
       const scopes = (run.asset_generation_approvals || []).filter(item => item.operation_type === 'IMAGE' && item.target_artifact_id === `appearance:${spec.character_id}` && item.target_revision === current?.revision && item.target_content_hash === current?.content_hash && item.request_fingerprint && item.approved_request);
       const scope = scopes.at(-1);
       const attempts = Object.fromEntries((run.asset_generation_attempts || []).map(item => [item.attempt_id, item]));
-      const candidates = spec.candidates.map(candidate => { const attempt = attempts[candidate.attempt_id] || {}; const state = candidate.status === 'APPROVED' ? 'APPROVED' : (attempt.status || candidate.status); const err = attempt.error || candidate.error; return `<li>${candidate.image_path ? `<img width="120" src="/api/runs/${run.run_id}/appearance-image/${candidate.candidate_id}" alt="candidate">` : ''}${esc(candidate.candidate_id.slice(0, 8))} · ${esc(state)} ${err ? esc(err) : ''} ${state === 'SUBMISSION_UNKNOWN' ? '<em> reconciliation required</em>' : ''} ${state === 'SUBMISSION_INTENDED' ? `<button data-submit="${candidate.attempt_id}">Gửi</button>` : ''}${['SUBMITTED','RUNNING'].includes(state) ? `<button data-refresh="${candidate.attempt_id}">Làm mới</button>` : ''}${state === 'COMPLETED' && candidate.candidate_id !== spec.selected_candidate_id ? `<button data-select="${esc(spec.character_id)}:${esc(candidate.candidate_id)}">Chọn</button>` : ''}${candidate.candidate_id === spec.selected_candidate_id ? `✓ selected ${!spec.approved_candidate_id ? `<button data-final="${spec.character_id}:${candidate.content_hash}">Duyệt ảnh</button>` : ''}` : ''}</li>`; }).join('') || '<li>Chưa có candidate.</li>';
+      const candidates = spec.candidates.map(candidate => {
+        const attempt = attempts[candidate.attempt_id] || {};
+        // Candidate state owns selection/approval. Attempt state is only a
+        // transport progress label: SUCCEEDED is never a candidate lifecycle.
+        const lifecycle = candidate.status;
+        const progress = attempt.status || lifecycle;
+        const err = attempt.error || candidate.error;
+        const submit = lifecycle === 'PLANNED' && progress === 'SUBMISSION_INTENDED';
+        const refresh = ['SUBMITTED', 'RUNNING'].includes(progress) && Boolean(attempt.provider_task_id);
+        const selectable = lifecycle === 'COMPLETED' && candidate.image_path && candidate.content_hash;
+        return `<li>${candidate.image_path ? `<img width="120" src="/api/runs/${run.run_id}/appearance-image/${candidate.candidate_id}" alt="candidate">` : ''}${esc(candidate.candidate_id.slice(0, 8))} · ${esc(lifecycle)}${progress !== lifecycle ? ` (${esc(progress)})` : ''} ${err ? esc(err) : ''} ${progress === 'SUBMISSION_UNKNOWN' ? '<em> reconciliation required</em>' : ''} ${submit ? `<button data-submit="${candidate.attempt_id}">Gửi</button>` : ''}${refresh ? `<button data-refresh="${candidate.attempt_id}">Làm mới</button>` : ''}${selectable && candidate.candidate_id !== spec.selected_candidate_id ? `<button data-select="${esc(spec.character_id)}:${esc(candidate.candidate_id)}">Chọn</button>` : ''}${candidate.candidate_id === spec.selected_candidate_id ? `✓ selected ${lifecycle === 'COMPLETED' && !spec.approved_candidate_id ? `<button data-final="${spec.character_id}:${candidate.content_hash}">Duyệt ảnh</button>` : ''}` : ''}</li>`;
+      }).join('') || '<li>Chưa có candidate.</li>';
       return `<article class="shot-card"><h3>${esc(spec.character_name)} <span class="status-tag">${esc(spec.character_id)}</span></h3><label>Mô tả tạo hình<textarea data-description="${esc(spec.character_id)}">${esc(spec.description)}</textarea></label><p>Scope hiện tại: ${scope ? `${scope.reserved_requests}/${scope.request_limit} intent` : 'chưa duyệt'}${scopes.length > 1 ? ` (${scopes.length - 1} scope cũ)` : ''}</p><p>Candidate: ${spec.candidates.length}</p><div class="panel-actions"><button data-edit="${esc(spec.character_id)}">Lưu bản sửa</button>${current?.status === 'DRAFT' ? `<button data-spec="${esc(spec.character_id)}">Duyệt mô tả</button>` : ''}${current?.status === 'APPROVED' && (!scope || scope.reserved_requests >= scope.request_limit) ? `<button data-scope="${esc(spec.character_id)}">Duyệt ${scope ? 'scope mới' : '3 request'}</button>` : ''}${scope && scope.reserved_requests < scope.request_limit ? `<button data-prepare="${esc(spec.character_id)}:${esc(scope.approval_id)}">Chuẩn bị ${Math.min(3, scope.request_limit - scope.reserved_requests)} intent</button>` : ''}</div><ul>${candidates}</ul></article>`;
     }).join('');
     root.innerHTML = `<section class="script-studio"><h2>Tạo hình nhân vật</h2><p>Scope approval chỉ chuẩn bị các intent; Studio không gửi Muse khi chưa có quyền live riêng.</p><div class="shot-grid">${cards || '<p>Không có nhân vật chính cần tạo hình.</p>'}</div></section>`;

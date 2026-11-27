@@ -44,6 +44,7 @@ from animation_studio.core.workflow import (
     ApprovalStatus,
     ArtifactRevision,
     ArtifactStatus,
+    ProviderJobState,
     StudioRunStatus,
     content_hash,
 )
@@ -464,6 +465,23 @@ def finalize_appearance_candidate(run_id: str, *, attempt_id: str, source: Path)
         return save_run(appearance_service.complete_candidate_from_file(
             run, attempt_id=attempt_id, source=source, assets_root=RUNS_DIR / run_id / "appearance"
         ))
+
+
+def refresh_appearance_candidate(run_id: str, *, attempt_id: str, provider: Muse2ApiProvider) -> StudioRun:
+    with _run_lock(run_id):
+        run = get_run(run_id)
+        attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
+        if attempt is None or not attempt.provider_task_id:
+            raise StudioWorkflowError("appearance attempt has no provider task ID")
+        if attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:
+            raise StudioWorkflowError("appearance attempt is not pollable")
+    task = provider.get_image_task(attempt.provider_task_id)
+    if task.status.lower() not in {"completed", "succeeded", "success"}:
+        return run
+    temp = RUNS_DIR / run_id / ".downloads" / f"{attempt_id}.png"
+    temp.parent.mkdir(parents=True, exist_ok=True)
+    source = provider.download_image_result(task, temp)
+    return finalize_appearance_candidate(run_id, attempt_id=attempt_id, source=source)
 
 
 def _build_analysis_prompt(brief: StudioBrief) -> str:

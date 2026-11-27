@@ -27,8 +27,10 @@ from animation_studio.studio.models import (
     AppearanceCandidateRequest,
     AppearanceSelectionRequest,
     AppearanceReferenceApprovalRequest,
+    AppearanceAttemptRequest,
 )
 from animation_studio.studio.service import (
+    RUNS_DIR,
     STUDIO_PROJECTS_DIR,
     SUBMIT_LOCK,
     accept_continuity_review,
@@ -53,10 +55,12 @@ from animation_studio.studio.service import (
     prepare_appearance_candidates,
     select_appearance_candidate,
     approve_selected_appearance_candidate,
+    submit_appearance_candidate,
+    refresh_appearance_candidate,
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
-from animation_studio.providers.muse2api import is_gateway_host_allowed
+from animation_studio.providers.muse2api import Muse2ApiProvider, is_gateway_host_allowed
 
 
 def _load_dotenv_if_present() -> None:
@@ -117,6 +121,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Muse Animation Studio", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.session_token = secrets.token_urlsafe(32)
     app.state.poll_tasks = {}
+    app.state.appearance_provider = None
 
     @app.middleware("http")
     async def local_only_and_csrf(request: Request, call_next):
@@ -268,6 +273,19 @@ def create_app() -> FastAPI:
             expected_hash=payload.expected_content_hash, approved_by=payload.approved_by,
         ))
 
+    def appearance_provider():
+        if app.state.appearance_provider is not None:
+            return app.state.appearance_provider
+        return Muse2ApiProvider(os.getenv("MUSE2API_BASE_URL", "http://127.0.0.1:18610/v1"), submission_enabled=False)
+
+    @app.post("/api/runs/{run_id}/appearance/submit")
+    async def submit_appearance(run_id: str, payload: AppearanceAttemptRequest):
+        return _public(await asyncio.to_thread(submit_appearance_candidate, run_id, attempt_id=payload.attempt_id, provider=appearance_provider()))
+
+    @app.post("/api/runs/{run_id}/appearance/refresh")
+    async def refresh_appearance(run_id: str, payload: AppearanceAttemptRequest):
+        return _public(await asyncio.to_thread(refresh_appearance_candidate, run_id, attempt_id=payload.attempt_id, provider=appearance_provider()))
+
     @app.post("/api/runs/{run_id}/manifest")
     async def make_manifest(run_id: str, payload: GenerationPlanRequest):
         return _public(await asyncio.to_thread(prepare_generation, run_id, payload.shot_id))
@@ -310,6 +328,18 @@ def create_app() -> FastAPI:
         if not path.is_relative_to(root) or not path.is_file():
             raise HTTPException(status_code=404, detail="Video file is unavailable")
         return FileResponse(path, media_type="video/mp4", headers={"Accept-Ranges": "bytes"})
+
+    @app.get("/api/runs/{run_id}/appearance-image/{candidate_id}")
+    async def appearance_image(run_id: str, candidate_id: str):
+        run = get_run(run_id)
+        candidate = next((candidate for spec in run.appearance_specs for candidate in spec.candidates if candidate.candidate_id == candidate_id), None)
+        if candidate is None or candidate.status not in {"COMPLETED", "APPROVED"} or not candidate.image_path:
+            raise HTTPException(status_code=404, detail="Appearance image is unavailable")
+        root = (RUNS_DIR / run_id / "appearance").resolve()
+        path = (root / candidate.image_path).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise HTTPException(status_code=404, detail="Appearance image is unavailable")
+        return FileResponse(path, media_type="image/png")
 
     @app.get("/api/runs/{run_id}/frame/{label}")
     async def frame(run_id: str, label: str):

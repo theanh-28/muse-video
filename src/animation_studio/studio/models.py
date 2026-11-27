@@ -336,6 +336,11 @@ class AppearanceReferenceApprovalRequest(BaseModel):
     approved_by: str = Field(min_length=1, max_length=120)
 
 
+class AppearanceAttemptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    attempt_id: str = Field(min_length=1, max_length=80)
+
+
 class ContinuityReviewAcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

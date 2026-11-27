@@ -23,6 +23,9 @@ from animation_studio.studio.models import (
     ScriptEditRequest,
     ContinuityReviewAcceptRequest,
     YouTubeMetadataRequest,
+    AppearanceApprovalRequest,
+    AppearanceCandidateRequest,
+    AppearanceSelectionRequest,
 )
 from animation_studio.studio.service import (
     STUDIO_PROJECTS_DIR,
@@ -43,6 +46,11 @@ from animation_studio.studio.service import (
     run_autopilot,
     approve_script,
     revise_script,
+    prepare_appearance,
+    approve_appearance_specification,
+    approve_appearance_generation,
+    prepare_appearance_candidates,
+    select_appearance_candidate,
 )
 from animation_studio.studio.scripts import ScriptPackage
 from animation_studio.studio.youtube_metadata import draft_youtube_metadata
@@ -143,7 +151,7 @@ def create_app() -> FastAPI:
 
     @app.get("/assets/{asset_name}")
     async def assets(asset_name: str):
-        if asset_name not in {"app.js", "app.css", "script-studio.js"}:
+        if asset_name not in {"app.js", "app.css", "script-studio.js", "appearance-studio.js"}:
             raise HTTPException(status_code=404)
         path = STATIC_DIR / asset_name
         return FileResponse(path)
@@ -216,6 +224,39 @@ def create_app() -> FastAPI:
         return _public(await asyncio.to_thread(
             approve_script, run_id, approved_by=payload.approved_by,
             expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
+        ))
+
+    @app.post("/api/runs/{run_id}/appearance/prepare")
+    async def prepare_appearance_stage(run_id: str):
+        return _public(await asyncio.to_thread(prepare_appearance, run_id))
+
+    @app.post("/api/runs/{run_id}/appearance/specification/approve")
+    async def approve_appearance_spec(run_id: str, payload: AppearanceApprovalRequest):
+        return _public(await asyncio.to_thread(
+            approve_appearance_specification, run_id, character_id=payload.character_id,
+            expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
+            approved_by=payload.approved_by,
+        ))
+
+    @app.post("/api/runs/{run_id}/appearance/generation/approve")
+    async def approve_appearance_scope(run_id: str, payload: AppearanceApprovalRequest):
+        return _public(await asyncio.to_thread(
+            approve_appearance_generation, run_id, character_id=payload.character_id,
+            expected_revision=payload.expected_revision, expected_content_hash=payload.expected_content_hash,
+            request_limit=payload.request_limit, approved_by=payload.approved_by,
+        ))
+
+    @app.post("/api/runs/{run_id}/appearance/candidates/prepare")
+    async def prepare_candidates(run_id: str, payload: AppearanceCandidateRequest):
+        return _public(await asyncio.to_thread(
+            prepare_appearance_candidates, run_id, character_id=payload.character_id,
+            approval_id=payload.approval_id, count=payload.count,
+        ))
+
+    @app.post("/api/runs/{run_id}/appearance/candidate/select")
+    async def choose_candidate(run_id: str, payload: AppearanceSelectionRequest):
+        return _public(await asyncio.to_thread(
+            select_appearance_candidate, run_id, character_id=payload.character_id, candidate_id=payload.candidate_id,
         ))
 
     @app.post("/api/runs/{run_id}/manifest")

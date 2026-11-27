@@ -278,6 +278,55 @@ class AssetGenerationAttempt(BaseModel):
     error: str | None = None
 
 
+class AppearanceCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candidate_id: str = Field(min_length=1, max_length=80)
+    attempt_id: str | None = None
+    image_path: str | None = None
+    content_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    status: Literal["PLANNED", "SUBMITTED", "COMPLETED", "FAILED", "APPROVED"] = "PLANNED"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    error: str | None = None
+
+
+class AppearanceSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    character_id: str = Field(min_length=1, max_length=120)
+    character_name: str = Field(min_length=1, max_length=240)
+    source_script_revision: int = Field(ge=1)
+    source_script_hash: str = Field(min_length=64, max_length=64)
+    revision: int = Field(ge=1)
+    description: str = Field(min_length=1, max_length=4000)
+    locked_attributes: list[str] = Field(default_factory=list)
+    candidates: list[AppearanceCandidate] = Field(default_factory=list)
+    selected_candidate_id: str | None = None
+    approved_candidate_id: str | None = None
+
+
+class AppearanceApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    expected_revision: int = Field(ge=1)
+    expected_content_hash: str = Field(min_length=64, max_length=64)
+    approved_by: str = Field(min_length=1, max_length=120)
+    request_limit: int = Field(default=3, ge=1, le=12)
+
+
+class AppearanceCandidateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    approval_id: str = Field(min_length=1, max_length=80)
+    count: int = Field(default=3, ge=1, le=12)
+
+
+class AppearanceSelectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_id: str = Field(min_length=1, max_length=120)
+    candidate_id: str = Field(min_length=1, max_length=80)
+
+
 class ContinuityReviewAcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -298,6 +347,7 @@ class StudioRun(BaseModel):
     authoring_operations: list[AuthoringOperation] = Field(default_factory=list)
     asset_generation_approvals: list[AssetGenerationApproval] = Field(default_factory=list)
     asset_generation_attempts: list[AssetGenerationAttempt] = Field(default_factory=list)
+    appearance_specs: list[AppearanceSpec] = Field(default_factory=list)
     analysis: CreativePackage | None = None
     project_dir: str | None = None
     deferred_shots: list[str] = Field(default_factory=list)

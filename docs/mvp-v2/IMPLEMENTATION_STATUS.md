@@ -9,6 +9,10 @@
 
 Last verified full regression: 63 passed, 1 third-party `starlette.testclient` deprecation warning. Skill validation passed for all 8 project-local skills. No live provider request was made.
 
+## Character Appearance delivery note
+
+M3 is PARTIAL: persisted main-character specifications, scope approval, and image intents are available in the local Studio. Candidate task polling/download and exact reference-image approval are not yet integrated, so no generated image is represented as approved.
+
 ## Directive 004 delivery note
 
 The legacy CLI `auto` command is intentionally disabled until the approved-assets orchestrator exists. This prevents it from bypassing the required Script Review approval gate after the Studio authoring workflow changed to `SCRIPT_REVIEW`.

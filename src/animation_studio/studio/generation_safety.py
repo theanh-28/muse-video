@@ -88,6 +88,7 @@ def begin_asset_attempt(
     parameters: dict[str, object],
     provider: str,
     reference_hashes: dict[Path, str] | None = None,
+    allow_parallel: bool = False,
 ) -> StudioRun:
     """Reserve one request and persist an intent before the external POST."""
     approval = next((item for item in run.asset_generation_approvals if item.approval_id == approval_id), None)
@@ -103,7 +104,7 @@ def begin_asset_attempt(
         raise GenerationSafetyError("generation approval is stale")
     if approval.reserved_requests >= approval.request_limit:
         raise GenerationSafetyError("approved generation request limit is exhausted")
-    if any(
+    if not allow_parallel and any(
         attempt.approval_id == approval_id
         and attempt.status in {ProviderJobState.SUBMISSION_INTENDED, ProviderJobState.SUBMISSION_UNKNOWN,
                                ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}

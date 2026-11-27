@@ -83,6 +83,7 @@ from animation_studio.studio.models import (
     AuthoringOperationStatus,
 )
 from animation_studio.studio.scripts import ScriptPackage
+from animation_studio.studio import appearance_service
 
 
 REPO_ROOT = Path(os.getenv("ANISTUDIO_HOME", REPO_ROOT)).resolve()
@@ -388,6 +389,45 @@ def approve_script(run_id: str, *, approved_by: str, expected_revision: int, exp
             "workflow": workflow,
             "approved_script_revision": len(run.script_revisions),
         }))
+
+
+def prepare_appearance(run_id: str) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(appearance_service.prepare_appearance_specs(get_run(run_id)))
+
+
+def approve_appearance_specification(
+    run_id: str, *, character_id: str, expected_revision: int, expected_content_hash: str, approved_by: str
+) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(appearance_service.approve_appearance_spec(
+            get_run(run_id), character_id=character_id, expected_revision=expected_revision,
+            expected_hash=expected_content_hash, approved_by=approved_by,
+        ))
+
+
+def approve_appearance_generation(
+    run_id: str, *, character_id: str, expected_revision: int, expected_content_hash: str,
+    request_limit: int, approved_by: str,
+) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(appearance_service.approve_generation_scope(
+            get_run(run_id), character_id=character_id, expected_revision=expected_revision,
+            expected_hash=expected_content_hash, request_limit=request_limit, approved_by=approved_by,
+        ))
+
+
+def prepare_appearance_candidates(run_id: str, *, character_id: str, approval_id: str, count: int = 3) -> StudioRun:
+    """Persist image intents only. Live POST stays disabled until separately authorized."""
+    with _run_lock(run_id):
+        return save_run(appearance_service.prepare_candidate_attempts(
+            get_run(run_id), character_id=character_id, approval_id=approval_id, count=count
+        ))
+
+
+def select_appearance_candidate(run_id: str, *, character_id: str, candidate_id: str) -> StudioRun:
+    with _run_lock(run_id):
+        return save_run(appearance_service.select_candidate(get_run(run_id), character_id=character_id, candidate_id=candidate_id))
 
 
 def _build_analysis_prompt(brief: StudioBrief) -> str:

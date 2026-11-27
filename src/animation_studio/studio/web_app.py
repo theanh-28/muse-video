@@ -342,14 +342,15 @@ def create_app() -> FastAPI:
     @app.get("/api/runs/{run_id}/appearance-image/{candidate_id}")
     async def appearance_image(run_id: str, candidate_id: str):
         run = get_run(run_id)
-        candidate = next((candidate for spec in run.appearance_specs for candidate in spec.candidates if candidate.candidate_id == candidate_id), None)
+        all_specs = [*run.appearance_specs, *run.appearance_spec_history]
+        candidate = next((candidate for spec in all_specs for candidate in spec.candidates if candidate.candidate_id == candidate_id), None)
         if candidate is None or candidate.status not in {"COMPLETED", "APPROVED"} or not candidate.image_path:
             raise HTTPException(status_code=404, detail="Appearance image is unavailable")
         root = (RUNS_DIR / run_id / "appearance").resolve()
         path = (root / candidate.image_path).resolve()
         if not path.is_relative_to(root) or not path.is_file():
             raise HTTPException(status_code=404, detail="Appearance image is unavailable")
-        return FileResponse(path, media_type="image/png")
+        return FileResponse(path, media_type=candidate.media_type or "application/octet-stream")
 
     @app.get("/api/runs/{run_id}/frame/{label}")
     async def frame(run_id: str, label: str):

@@ -291,7 +291,8 @@ class AppearanceCandidate(BaseModel):
     provider_task_id: str | None = None
     image_path: str | None = None
     content_hash: str | None = Field(default=None, min_length=64, max_length=64)
-    status: Literal["PLANNED", "SUBMITTED", "COMPLETED", "FAILED", "APPROVED"] = "PLANNED"
+    status: Literal["PLANNED", "CLAIMED", "SUBMISSION_UNKNOWN", "SUBMITTED", "RUNNING", "COMPLETED", "FAILED", "APPROVED"] = "PLANNED"
+    media_type: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     error: str | None = None
 

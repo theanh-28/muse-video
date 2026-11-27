@@ -13,3 +13,5 @@ Refresh is safe: runs persist under `data/studio/runs`. Do not edit persisted JS
 ## Appearance preparation update (Directive 005, partial)
 
 After script approval, Appearance preparation may be opened. Each main character's specification can be edited only against the revision/hash currently shown; saving creates a new draft revision and preserves prior candidates as history. Before an image request can be sent, approve the exact displayed scope. Changing its prompt, parameters, provider, or reference bytes requires a new approval. This local feature does not yet make Voice Studio or final asset approval available.
+
+Candidate status reflects its saved request state. A claimed, submitted, running, or submission-unknown candidate cannot be sent again; `SUBMISSION_UNKNOWN` requires reconciliation. Completed candidate previews may be selected, then the exact file is verified again before final reference approval. Exhausted generation scopes can be replaced only by another explicit approval for the current revision.

@@ -104,6 +104,21 @@ def prepare_candidate_attempts(run: StudioRun, *, character_id: str, approval_id
     spec = next((item for item in run.appearance_specs if item.character_id == character_id), None)
     if spec is None:
         raise AppearanceError("appearance specification does not exist")
+    artifact = run.workflow.current(f"appearance:{character_id}")
+    approval = next((item for item in run.asset_generation_approvals if item.approval_id == approval_id), None)
+    if artifact is None or approval is None:
+        raise AppearanceError("appearance generation approval does not exist")
+    if (
+        approval.operation_type != "IMAGE"
+        or approval.target_artifact_id != artifact.artifact_id
+        or approval.target_revision != artifact.revision
+        or approval.target_content_hash != artifact.content_hash
+        or not approval.request_fingerprint
+        or not approval.approved_request
+    ):
+        raise AppearanceError("generation approval does not authorize this current character appearance")
+    if count > approval.request_limit - approval.reserved_requests:
+        raise AppearanceError("requested candidates exceed the remaining approved request count")
     updated = run
     candidates = list(spec.candidates)
     for _ in range(count):
@@ -159,7 +174,8 @@ def record_submitted_candidate(run: StudioRun, *, attempt_id: str, provider_task
 
 
 def record_unknown_candidate_submission(run: StudioRun, *, attempt_id: str, error: str) -> StudioRun:
-    return mark_submission_unknown(run, attempt_id=attempt_id, error=error)
+    updated = mark_submission_unknown(run, attempt_id=attempt_id, error=error)
+    return _update_candidate_for_attempt(updated, attempt_id, status="SUBMISSION_UNKNOWN", error=error[:2400])
 
 
 def attempt_for_submission(run: StudioRun, attempt_id: str):
@@ -173,7 +189,8 @@ def attempt_for_submission(run: StudioRun, attempt_id: str):
 
 def claim_candidate_submission(run: StudioRun, *, attempt_id: str) -> tuple[StudioRun, object]:
     try:
-        return claim_asset_attempt(run, attempt_id=attempt_id)
+        claimed, attempt = claim_asset_attempt(run, attempt_id=attempt_id)
+        return _update_candidate_for_attempt(claimed, attempt_id, status="CLAIMED", error=None), attempt
     except ValueError as exc:
         raise AppearanceError(str(exc)) from exc
 
@@ -182,19 +199,17 @@ def complete_candidate_from_file(run: StudioRun, *, attempt_id: str, source: Pat
     attempt = next((item for item in run.asset_generation_attempts if item.attempt_id == attempt_id), None)
     if attempt is None or attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:
         raise AppearanceError("candidate attempt is not ready for a downloaded result")
-    if not source.is_file() or source.stat().st_size == 0:
-        raise AppearanceError("downloaded candidate image is missing or empty")
-    header = source.read_bytes()[:12]
-    if not (header.startswith(b"\x89PNG\r\n\x1a\n") or header.startswith(b"\xff\xd8\xff") or header[:6] in {b"GIF87a", b"GIF89a"}):
-        raise AppearanceError("downloaded candidate is not a supported image")
-    destination = assets_root / attempt.target_artifact_id.replace(":", "_") / f"{attempt_id}{source.suffix.lower() or '.png'}"
+    image_info = _validate_decodable_image(source)
+    extension = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp", "GIF": ".gif"}[image_info["format"]]
+    destination = assets_root / attempt.target_artifact_id.replace(":", "_") / f"{attempt_id}{extension}"
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         raise AppearanceError("refusing to overwrite an existing candidate image")
     shutil.copyfile(source, destination)
+    copied_info = _validate_decodable_image(destination)
     relative = destination.relative_to(assets_root).as_posix()
     updated = _update_candidate_for_attempt(
-        run, attempt_id, image_path=relative, content_hash=file_content_hash(destination), status="COMPLETED"
+        run, attempt_id, image_path=relative, content_hash=copied_info["content_hash"], media_type=copied_info["media_type"], status="COMPLETED", error=None
     )
     attempts = [item.model_copy(update={"status": ProviderJobState.SUCCEEDED, "output_paths": [relative]}) if item.attempt_id == attempt_id else item for item in updated.asset_generation_attempts]
     return updated.model_copy(update={"asset_generation_attempts": attempts})
@@ -223,20 +238,27 @@ def approve_selected_candidate(run: StudioRun, *, character_id: str, expected_ha
     return run.model_copy(update={"workflow": workflow, "appearance_specs": [changed_spec if item.character_id == character_id else item for item in run.appearance_specs]})
 
 
-def _validate_decodable_image(path: Path) -> None:
+def _validate_decodable_image(path: Path) -> dict[str, object]:
     try:
         from PIL import Image, UnidentifiedImageError
     except ImportError as exc:  # pragma: no cover - installation is validated by packaging
         raise AppearanceError("Pillow is required to validate downloaded candidate images") from exc
     try:
+        if not path.is_file() or path.stat().st_size <= 0:
+            raise AppearanceError("downloaded candidate image is missing or empty")
+        if path.stat().st_size > 40 * 1024 * 1024:
+            raise AppearanceError("downloaded candidate image is unreasonably large")
         with Image.open(path) as image:
             image.verify()
         with Image.open(path) as image:
             width, height = image.size
-            if image.format not in {"PNG", "JPEG", "WEBP", "GIF"} or width <= 0 or height <= 0:
+            actual_format = image.format
+            if actual_format not in {"PNG", "JPEG", "WEBP", "GIF"} or width <= 0 or height <= 0:
                 raise AppearanceError("downloaded candidate has unsupported format or dimensions")
-            if width * height > 100_000_000 or path.stat().st_size > 40 * 1024 * 1024:
+            if width * height > 100_000_000:
                 raise AppearanceError("downloaded candidate image is unreasonably large")
+            image.load()
+        return {"format": actual_format, "media_type": Image.MIME[actual_format], "content_hash": file_content_hash(path)}
     except (OSError, UnidentifiedImageError) as exc:
         raise AppearanceError("selected candidate image cannot be completely decoded") from exc
 
@@ -252,3 +274,19 @@ def _update_candidate_for_attempt(run: StudioRun, attempt_id: str, **updates: ob
         specs.append(spec.model_copy(update={"candidates": candidates}))
     if not changed: raise AppearanceError("candidate for attempt does not exist")
     return run.model_copy(update={"appearance_specs": specs})
+
+
+def record_candidate_failure(run: StudioRun, *, attempt_id: str, error: str) -> StudioRun:
+    attempts = [
+        item.model_copy(update={"status": ProviderJobState.FAILED, "error": error[:2400]}) if item.attempt_id == attempt_id else item
+        for item in run.asset_generation_attempts
+    ]
+    return _update_candidate_for_attempt(run.model_copy(update={"asset_generation_attempts": attempts}), attempt_id, status="FAILED", error=error[:2400])
+
+
+def record_candidate_running(run: StudioRun, *, attempt_id: str) -> StudioRun:
+    attempts = [
+        item.model_copy(update={"status": ProviderJobState.RUNNING}) if item.attempt_id == attempt_id else item
+        for item in run.asset_generation_attempts
+    ]
+    return _update_candidate_for_attempt(run.model_copy(update={"asset_generation_attempts": attempts}), attempt_id, status="RUNNING")

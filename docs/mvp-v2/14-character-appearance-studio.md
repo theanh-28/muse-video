@@ -36,4 +36,14 @@ The offline two-character fixture verifies that two independently approved scope
 
 The existing Appearance Studio card now exposes the description as an editable field with a revision-bound “Lưu bản sửa” action. The action disables its control while the request is pending and renders the persisted response or leaves the unsaved text in place on failure.
 
+## Offline lifecycle completion (2026-11-27)
+
+The current generation scope is selected only when its IMAGE operation, artifact ID, target revision, target hash, and complete request fingerprint all match the displayed appearance artifact. Exhausted scopes remain historical and a new explicit scope may be approved; cross-character scope reuse is rejected even where descriptions are identical.
+
+Candidate presentation derives progress from its durable generation attempt. `SUBMISSION_CLAIMED`, `SUBMISSION_UNKNOWN`, `SUBMITTED`, `RUNNING`, terminal failures, and completed results are distinct. Unknown outcomes explicitly require reconciliation and cannot become another automatic submission. A terminal provider failure remains a consumed failed attempt and candidate.
+
+Download handling uses a unique temporary path, validates file size, Pillow `verify()`, a second open plus `load()`, format, dimensions, decoded-pixel limit, and SHA-256 before persisting a completed candidate. The media route serves the verified candidate MIME type and can locate read-only candidates in historical appearance revisions. Final approval independently repeats byte hashing and decoding.
+
+Verification: the TestClient six-image fake-provider acceptance completed six claimed-on-disk tasks, observed a nonterminal poll before each completion, served six previews, selected/approved both references, and reloaded the persisted hashes. `uv run pytest -q tests/test_appearance_workflow.py` passed 7 tests on 2026-11-27. No live provider was called.
+
 Final reference approval rehashes the run-contained file and fully decodes PNG, JPEG, WEBP, or GIF through Pillow before approval. Header-shaped/truncated bytes, zero dimensions, and unreasonable decoded sizes are rejected. Pillow is now an explicit project dependency.

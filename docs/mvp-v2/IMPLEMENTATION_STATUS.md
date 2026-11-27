@@ -20,3 +20,5 @@ The legacy CLI `auto` command is intentionally disabled until the approved-asset
 ## Directive 005 progress (2026-11-27)
 
 Character Appearance remains PARTIAL. Completed work is limited to safety-integrated appearance preparation: canonical request-scope fingerprints, persisted pre-POST claims, unknown-outcome overlap blocking, full Pillow image decoding, synchronized asset-preparation status, and revision-safe specification edits. Deterministic targeted regression passed 15 tests. Voice Studio, Kokoro, the final asset bundle, full six-image API acceptance, and browser acceptance are not yet implemented.
+
+Appearance now has an offline full six-image API acceptance fixture using a fake Muse provider, including persisted claims, nonterminal polling, decoded candidate previews, reference approvals, and reload verification. Remaining Appearance work is structured authoring and browser verification; Voice Studio and asset bundle work remain unimplemented.

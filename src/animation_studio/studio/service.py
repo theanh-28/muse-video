@@ -488,13 +488,31 @@ def refresh_appearance_candidate(run_id: str, *, attempt_id: str, provider: Muse
             raise StudioWorkflowError("appearance attempt has no provider task ID")
         if attempt.status not in {ProviderJobState.SUBMITTED, ProviderJobState.RUNNING}:
             raise StudioWorkflowError("appearance attempt is not pollable")
-    task = provider.get_image_task(attempt.provider_task_id)
-    if task.status.lower() not in {"completed", "succeeded", "success"}:
-        return run
-    temp = RUNS_DIR / run_id / ".downloads" / f"{attempt_id}.png"
+    try:
+        task = provider.get_image_task(attempt.provider_task_id)
+    except ProviderError:
+        # The known task ID remains persisted and therefore pollable later.
+        raise
+    state = task.status.lower()
+    if state in {"failed", "error", "cancelled", "canceled"}:
+        detail = str(task.raw.get("error") or task.raw.get("message") or f"provider task {state}")
+        with _run_lock(run_id):
+            return save_run(appearance_service.record_candidate_failure(get_run(run_id), attempt_id=attempt_id, error=detail))
+    if state not in {"completed", "succeeded", "success"}:
+        with _run_lock(run_id):
+            current = get_run(run_id)
+            current_attempt = next((item for item in current.asset_generation_attempts if item.attempt_id == attempt_id), None)
+            if current_attempt and current_attempt.status == ProviderJobState.SUBMITTED:
+                return save_run(appearance_service.record_candidate_running(current, attempt_id=attempt_id))
+            return current
+    temp = RUNS_DIR / run_id / ".downloads" / f"{attempt_id}-{uuid4().hex}.png"
     temp.parent.mkdir(parents=True, exist_ok=True)
-    source = provider.download_image_result(task, temp)
-    return finalize_appearance_candidate(run_id, attempt_id=attempt_id, source=source)
+    try:
+        source = provider.download_image_result(task, temp)
+        return finalize_appearance_candidate(run_id, attempt_id=attempt_id, source=source)
+    except (ProviderError, ValueError, OSError) as exc:
+        with _run_lock(run_id):
+            return save_run(appearance_service.record_candidate_failure(get_run(run_id), attempt_id=attempt_id, error=str(exc)))
 
 
 def _build_analysis_prompt(brief: StudioBrief) -> str:

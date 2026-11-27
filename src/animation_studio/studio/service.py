@@ -242,6 +242,26 @@ def _append_script_revision(run: StudioRun, package: ScriptPackage) -> StudioRun
     })
 
 
+def _owned_authoring_operation(run: StudioRun, operation: AuthoringOperation) -> AuthoringOperation:
+    """Return the single persisted operation that may complete this invocation."""
+    matches = [item for item in run.authoring_operations if item.operation_id == operation.operation_id]
+    if len(matches) != 1 or matches[0].status != AuthoringOperationStatus.STARTED:
+        raise StudioWorkflowError("Authoring operation no longer owns this run")
+    persisted = matches[0]
+    if run.workflow.status != StudioRunStatus.SCRIPT_GENERATING:
+        raise StudioWorkflowError("Authoring operation is not in SCRIPT_GENERATING state")
+    if persisted.base_revision != operation.base_revision or persisted.base_content_hash != operation.base_content_hash:
+        raise StudioWorkflowError("Authoring operation base revision no longer matches")
+    return persisted
+
+
+def _replace_authoring_operation(run: StudioRun, updated: AuthoringOperation) -> list[AuthoringOperation]:
+    matches = [item for item in run.authoring_operations if item.operation_id == updated.operation_id]
+    if len(matches) != 1:
+        raise StudioWorkflowError("Authoring operation record is inconsistent")
+    return [updated if item.operation_id == updated.operation_id else item for item in run.authoring_operations]
+
+
 def generate_script_run(
     run_id: str, *, feedback: str = "", expected_revision: int | None = None, expected_content_hash: str | None = None
 ) -> StudioRun:
@@ -251,6 +271,12 @@ def generate_script_run(
         if run.workflow.status not in {StudioRunStatus.BRIEF_RECEIVED, StudioRunStatus.SCRIPT_REVIEW, StudioRunStatus.SCRIPT_APPROVED}:
             raise StudioWorkflowError("Script generation is not available in the current workflow state")
         current = run.workflow.current("script")
+        if feedback and (not feedback.strip() or expected_revision is None or expected_content_hash is None):
+            raise StudioWorkflowError("Feedback revisions require nonblank feedback and expected revision/hash")
+        if feedback and current is None:
+            raise StudioWorkflowError("Feedback revisions require a current script")
+        if not feedback and current is not None:
+            raise StudioWorkflowError("Initial script generation is only available before a script exists")
         if expected_revision is not None and (current is None or current.revision != expected_revision or current.content_hash != expected_content_hash):
             raise StudioWorkflowError("Script revision changed; reload before requesting feedback")
         if any(operation.status == AuthoringOperationStatus.STARTED for operation in run.authoring_operations):
@@ -270,26 +296,25 @@ def generate_script_run(
                                                             current.content_hash if feedback and current else None), ScriptPackage)
         with _run_lock(run_id):
             current = get_run(run_id)
+            persisted_operation = _owned_authoring_operation(current, operation)
             current_artifact = current.workflow.current("script")
-            if expected_revision is not None and (
-                current_artifact is None or current_artifact.revision != expected_revision
-                or current_artifact.content_hash != expected_content_hash
-            ):
-                raise StudioWorkflowError("Script revision changed; reload before requesting feedback")
+            if current_artifact is not None and (current_artifact.revision != persisted_operation.base_revision or
+                                                 current_artifact.content_hash != persisted_operation.base_content_hash):
+                raise StudioWorkflowError("Script revision changed before completion")
+            if current_artifact is None and persisted_operation.base_revision is not None:
+                raise StudioWorkflowError("Script revision disappeared before completion")
             updated = _append_script_revision(current, package)
-            finished = operation.model_copy(update={"status": AuthoringOperationStatus.SUCCEEDED, "finished_at": _utcnow(),
+            finished = persisted_operation.model_copy(update={"status": AuthoringOperationStatus.SUCCEEDED, "finished_at": _utcnow(),
                                                      "result_revision": len(updated.script_revisions), "usage": usage})
             return save_run(updated.model_copy(update={"codex_usage": _merge_usage(updated.codex_usage, usage),
-                                                        "authoring_operations": [*updated.authoring_operations[:-1], finished]}))
+                                                        "authoring_operations": _replace_authoring_operation(updated, finished)}))
     except (CodexBridgeError, StudioWorkflowError, ValidationError, OSError) as exc:
         with _run_lock(run_id):
             failed = get_run(run_id)
-            matches = [item for item in failed.authoring_operations if item.operation_id == operation.operation_id]
-            if len(matches) != 1 or matches[0].status != AuthoringOperationStatus.STARTED:
-                raise StudioWorkflowError("Authoring operation no longer owns this run") from exc
-            failed_operation = matches[0].model_copy(update={"status": AuthoringOperationStatus.FAILED,
+            owned = _owned_authoring_operation(failed, operation)
+            failed_operation = owned.model_copy(update={"status": AuthoringOperationStatus.FAILED,
                 "finished_at": _utcnow(), "error": str(exc)[:2400]})
-            operations = [failed_operation if item.operation_id == operation.operation_id else item for item in failed.authoring_operations]
+            operations = _replace_authoring_operation(failed, failed_operation)
             workflow = failed.workflow.transition(StudioRunStatus(operation.previous_status))
             return save_run(failed.model_copy(update={"status": operation.previous_status, "workflow": workflow,
                 "error": str(exc)[:2400], "authoring_operations": operations}))

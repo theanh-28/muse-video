@@ -31,6 +31,19 @@ Bạn là AI Animation Director kiêm Senior Automation Engineer. Người dùng
 - Trước mỗi commit, rà soát diff và staging để commit chỉ chứa phần thuộc mốc đó; giữ lại thay đổi có sẵn hoặc không liên quan của người dùng/agent khác. Không commit credentials, cookies, session storage, API keys, dữ liệu runtime riêng tư hoặc media bị loại trừ.
 - Nếu chưa thể tạo commit an toàn hoặc chưa hoàn tất tài liệu cần thiết, phải nêu rõ phần còn thiếu và lý do trong báo cáo công việc.
 
+## Chính sách tài liệu phát triển lâu dài
+
+Chính sách này áp dụng cho mọi coding agent, phiên triển khai và milestone trong tương lai.
+
+1. Mọi thay đổi code ảnh hưởng hành vi hệ thống phải đi kèm tài liệu kỹ thuật tương ứng và được commit cùng code theo cùng phạm vi logic.
+2. Không ghi đè hoặc xóa lịch sử quyết định kỹ thuật. Khi thay thế một quyết định cũ, ghi rõ trạng thái `superseded` và tham chiếu quyết định/tài liệu thay thế.
+3. Mỗi development record cần, ở mức phù hợp với thay đổi, ghi bối cảnh/vấn đề, mục tiêu, hành vi trước/sau, quyết định và lý do, phương án đã cân nhắc, module/file/symbol liên quan, ảnh hưởng liên phân hệ, cấu hình/cách dùng, test và lệnh đã chạy cùng kết quả thực tế, known limitations, phần chưa xác minh, và migration/backward compatibility.
+4. Quyết định kiến trúc quan trọng phải có ADR trong `docs/ADR/`. Không tạo tài liệu trùng lặp: cập nhật tài liệu hiện hành phù hợp và lưu development record cho lịch sử.
+5. Cập nhật `docs/mvp-v2/IMPLEMENTATION_STATUS.md` sau mỗi milestone hoặc thay đổi trạng thái nghiệm thu; cập nhật `REPOSITORY_MAP.md` khi module, entry point hoặc trách nhiệm thay đổi; cập nhật `USER_GUIDE.md` khi hành vi/quy trình người dùng thay đổi.
+6. Không tuyên bố hoàn thành chỉ vì code tồn tại: phải có bằng chứng nghiệm thu tương ứng. Mọi tài liệu kỹ thuật liên quan phải được push cùng commit code.
+7. Một thay đổi nghiệp vụ chỉ hoàn thành khi implementation, test liên quan, regression, tài liệu, staged-diff review, commit rõ ràng và push GitHub đều đã hoàn tất.
+8. Với typo, formatting hoặc refactor không đổi hành vi, dùng commit message rõ ràng và chỉ cập nhật tài liệu liên quan khi cần; không tạo development record dài một cách máy móc.
+
 ## Giao thức làm việc
 - Phân biệt `PLAN`, `DRAFT`, `APPROVED`, `GENERATING`, `GENERATED`, `QC_PASSED`, `EXPORTED`.
 - Prompt/Storyboard ở trạng thái `DRAFT` không được gửi đến provider.
